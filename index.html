@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#E67E22">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Zephyrus">
+  <meta name="description" content="Pusat komando digital untuk Industri Rumah Tangga Pangan">
+  <link rel="manifest" href="manifest.json">
+  <title>Zephyrus — IRTP Dashboard</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #FFF8F0; color: #2C3E50; line-height: 1.5;
+      max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 80px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== TYPOGRAPHY ===== */
+    h1 { font-size: 1.5rem; font-weight: 700; }
+    h2 { font-size: 1.125rem; font-weight: 600; }
+    h3 { font-size: 0.95rem; font-weight: 600; }
+    .text-sm { font-size: 0.8125rem; }
+    .text-xs { font-size: 0.7rem; }
+
+    /* ===== COLORS ===== */
+    :root {
+      --primary: #E67E22;
+      --primary-dark: #D35400;
+      --primary-light: #FDEBD0;
+      --bg: #FFF8F0;
+      --card-bg: #FFFFFF;
+      --text: #2C3E50;
+      --text-secondary: #7F8C8D;
+      --success: #27AE60;
+      --warning: #F39C12;
+      --danger: #E74C3C;
+      --border: #F0E4D4;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; padding: 16px 20px 14px; position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(230,126,34,0.25);
+    }
+    .header h1 { display: flex; align-items: center; gap: 8px; font-size: 1.25rem; }
+    .header h1 span { background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 12px; font-size: 0.65rem; font-weight: 500; }
+    .header-user { text-align: right; font-size: 0.75rem; opacity: 0.9; }
+    .header-user strong { display: block; font-size: 0.85rem; }
+
+    /* ===== SALUTATION ===== */
+    .salutation {
+      padding: 16px 20px 8px;
+    }
+    .salutation h2 { font-size: 1.15rem; }
+    .salutation .date { color: var(--text-secondary); font-size: 0.78rem; margin-top: 2px; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--card-bg); border-radius: 14px; padding: 16px; margin: 10px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid var(--border);
+    }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .card-header .icon { font-size: 1.3rem; }
+    .card-header h3 { flex: 1; }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .progress-bar { flex: 1; height: 8px; background: #F0E4D4; border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+    .progress-fill.green { background: var(--success); }
+    .progress-fill.yellow { background: var(--warning); }
+    .progress-fill.red { background: var(--danger); }
+    .progress-fill.orange { background: var(--primary); }
+
+    /* ===== BADGES ===== */
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; }
+    .badge-green { background: #E8F8F0; color: var(--success); }
+    .badge-yellow { background: #FEF9E7; color: var(--warning); }
+    .badge-red { background: #FDEDEC; color: var(--danger); }
+    .badge-orange { background: var(--primary-light); color: var(--primary-dark); }
+
+    /* ===== STATUS INDICATORS ===== */
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+    .status-dot.green { background: var(--success); }
+    .status-dot.yellow { background: var(--warning); }
+    .status-dot.red { background: var(--danger); }
+
+    /* ===== LIST ITEMS ===== */
+    .list-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #F5EDE4; gap: 10px; }
+    .list-item:last-child { border-bottom: none; }
+    .list-item .left { flex: 1; }
+    .list-item .label { font-weight: 500; font-size: 0.9rem; }
+    .list-item .sub { font-size: 0.75rem; color: var(--text-secondary); }
+    .list-item .right { text-align: right; }
+
+    /* ===== INSIGHT CARD ===== */
+    .insight { padding: 12px 14px; border-radius: 10px; margin-top: 10px; display: flex; gap: 10px; align-items: flex-start; }
+    .insight-alert { background: #FDEDEC; border-left: 4px solid var(--danger); }
+    .insight-warning { background: #FEF9E7; border-left: 4px solid var(--warning); }
+    .insight-info { background: #EAF7EE; border-left: 4px solid var(--success); }
+    .insight-icon { font-size: 1.2rem; }
+    .insight-text { flex: 1; }
+    .insight-text strong { display: block; font-size: 0.8rem; margin-bottom: 2px; }
+    .insight-text p { font-size: 0.78rem; color: var(--text-secondary); }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+      border: none; cursor: pointer; transition: all 0.15s; min-height: 44px;
+      min-width: 44px; -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-sm { padding: 6px 14px; font-size: 0.78rem; min-height: 36px; }
+    .btn-block { width: 100%; justify-content: center; }
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+
+    /* ===== CHAT ===== */
+    .chat-input-row { display: flex; gap: 8px; align-items: center; }
+    .chat-input-row input {
+      flex: 1; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 0.9rem; background: var(--card-bg); outline: none; min-height: 44px;
+    }
+    .chat-input-row input:focus { border-color: var(--primary); }
+    .chat-input-row button { min-width: 44px; height: 44px; border-radius: 10px; }
+
+    /* ===== BOTTOM NAV ===== */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      background: white; border-top: 1px solid var(--border);
+      display: flex; padding: 4px 0 env(safe-area-inset-bottom, 4px) 0;
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 8px 0 6px; cursor: pointer; transition: all 0.15s;
+      border: none; background: none; color: var(--text-secondary); font-size: 0.6rem;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item .nav-icon { font-size: 1.3rem; line-height: 1; }
+    .nav-item .nav-label { margin-top: 2px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-item.active .nav-icon { transform: scale(1.05); }
+
+    /* ===== TAB CONTENT ===== */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ===== PAGE SPECIFIC ===== */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric-box { text-align: center; padding: 12px; background: var(--bg); border-radius: 10px; }
+    .metric-box .num { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .metric-box .label { font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px; }
+
+    .stock-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #F5EDE4; }
+    .stock-row:last-child { border-bottom: none; }
+    .stock-row .stock-name { flex: 1; font-size: 0.85rem; }
+    .stock-row .stock-qty { font-size: 0.85rem; font-weight: 600; margin-right: 8px; }
+
+    .route-step {
+      display: flex; gap: 10px; padding: 10px 0; align-items: flex-start;
+      border-bottom: 1px solid #F5EDE4;
+    }
+    .route-step:last-child { border-bottom: none; }
+    .route-num { width: 24px; height: 24px; border-radius: 50%; background: var(--primary-light); color: var(--primary-dark); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+    .route-info { flex: 1; }
+    .route-info .name { font-weight: 500; font-size: 0.85rem; }
+    .route-info .detail { font-size: 0.75rem; color: var(--text-secondary); }
+    .route-info .flag { font-size: 0.7rem; margin-top: 2px; }
+
+    /* ===== ORDERS ===== */
+    .order-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .card { animation: fadeIn 0.3s ease; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (min-width: 481px) {
+      body { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+    }
+    @media (display-mode: standalone) {
+      .header { padding-top: 24px; }
+    }
+
+    /* ===== UTILITY ===== */
+    .mt-8 { margin-top: 8px; }
+    .mb-4 { margin-bottom: 4px; }
+    .flex { display: flex; }
+    .flex-1 { flex: 1; }
+    .gap-8 { gap: 8px; }
+    .text-center { text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <h1>🌬️ Zephyrus <span>IRTP</span></h1>
+    <div class="header-user">
+      <strong>Bu Sumi</strong>
+      Tempe Berkah Lamongan
+    </div>
+  </header>
+
+  <!-- ===== SALUTATION ===== -->
+  <div class="salutation">
+    <h2>🌅 Selamat pagi, Bu Sumi!</h2>
+    <div class="date" id="currentDate"></div>
+  </div>
+
+  <!-- ===== TAB: DASHBOARD ===== -->
+  <div class="tab-content active" id="tab-dashboard">
+
+    <!-- Card: Produksi -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">🏭</span>
+        <h3>Produksi Besok</h3>
+        <span class="badge badge-green">●●●●○ 87%</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px;">
+        <span style="font-size:2rem;font-weight:700;color:var(--primary);">210</span>
+        <span style="font-size:0.9rem;color:var(--text-secondary);">tempe</span>
+        <span style="font-size:0.75rem;color:var(--text-secondary);margin-left:auto;">kisaran: 190–230</span>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;">Rekomendasi AI berdasarkan data penjualan 14 hari terakhir</div>
+
+      <div style="background:#F5EDE4;height:1px;margin:8px 0;"></div>
+
+      <div style="font-size:0.85rem;font-weight:600;margin-bottom:6px;">🧪 Bahan yang dibutuhkan</div>
+      <div class="stock-row">
+        <span class="stock-name">Kedelai</span>
+        <span class="stock-qty" style="color:var(--success);">✅ 21 kg</span>
+        <span class="text-sm" style="color:var(--text-secondary);">stok 50 kg</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Ragi</span>
+        <span class="stock-qty" style="color:var(--danger);">🔴 105 g</span>
+        <span class="text-sm" style="color:var(--text-secondary);">stok 80 g — <strong style="color:var(--danger);">BELI!</strong></span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary flex-1" onclick="alert('Override: jumlah produksi diubah jadi 200 tempe')">✏️ Ubah Jumlah</button>
+        <button class="btn btn-outline flex-1" onclick="alert('OK! 210 tempe dikonfirmasi untuk besok')">✅ Setuju</button>
+      </div>
+    </div>
+
+    <!-- Card: Stok Bahan Baku -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">📦</span>
+        <h3>Stok Bahan Baku</h3>
+        <span class="badge badge-yellow">🟡 3–7 hari</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Kedelai</span>
+        <span class="stock-qty">50 kg</span>
+        <span class="text-xs badge badge-green">🟢 7+ hr</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Ragi</span>
+        <span class="stock-qty">80 g</span>
+        <span class="text-xs badge badge-red">🔴 <3 hr BELI</span>
+      </div>
+      <div class="stock-row">
+        <span class="stock-name">Plastik kemasan</span>
+        <span class="stock-qty">220 pcs</span>
+        <span class="text-xs badge badge-yellow">🟡 5 hr</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline btn-sm flex-1" onclick="alert('Form update stok akan muncul')">➕ Update Stok</button>
+        <button class="btn btn-primary btn-sm flex-1" onclick="alert('Notifikasi: Ragi habis dalam 1 hari. Rekomendasi beli 100g — Rp 5.000')">🛒 Belanja</button>
+      </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">💡</span>
+        <h3>Insight Hari Ini</h3>
+      </div>
+      <div class="insight insight-alert">
+        <span class="insight-icon">🚨</span>
+        <div class="insight-text">
+          <strong>Harga kedelai naik 12% minggu depan</strong>
+          <p>Rp 11.500 → Rp 12.900/kg. Stok Ibu cukup 3 hari. <strong>Rekomendasi: beli stok 2 minggu SEKARANG</strong> sebelum naik lagi.</p>
+        </div>
+      </div>
+      <div class="insight insight-warning">
+        <span class="insight-icon">📉</span>
+        <div class="insight-text">
+          <strong>Kantin D pesanan turun 30%</strong>
+          <p>Bulan lalu pesan 30–35 tempe/hari, sekarang 20. Mungkin ada masalah — cek apakah beli dari kompetitor?</p>
+        </div>
+      </div>
+      <div class="insight insight-info">
+        <span class="insight-icon">📊</span>
+        <div class="insight-text">
+          <strong>Minggu depan Lebaran — naikkan produksi 40%</strong>
+          <p>Tahun lalu permintaan naik 40% saat H-7 Lebaran. Rekomendasi: produksi 290 tempe/hari mulai pekan depan.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Quick -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">💬</span>
+        <h3>Tanya Zephyrus</h3>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Contoh: berapa harga jual tempe yang aman?" onkeydown="if(event.key==='Enter') sendChat()">
+        <button class="btn btn-primary" onclick="sendChat()">Kirim</button>
+      </div>
+      <div id="chatResponse" style="margin-top:10px;font-size:0.85rem;min-height:20px;color:var(--text-secondary);"></div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: PRODUKSI ===== -->
+  <div class="tab-content" id="tab-produksi">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">🏭</span>
+        <h3>Resep & Produksi</h3>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-weight:600;">Tempe</span>
+          <span class="badge badge-orange">Produk utama</span>
+        </div>
+        <div class="text-sm" style="color:var(--text-secondary);">1 tempe = 100g kedelai + 0.5g ragi</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="metric-box">
+          <div class="num">210</div>
+          <div class="label">Produksi Besok</div>
+        </div>
+        <div class="metric-box">
+          <div class="num">280</div>
+          <div class="label">Minggu Ini</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="progress-row">
+          <span class="text-xs" style="width:45px;">Sen</span>
+          <div class="progress-bar"><div class="progress-fill orange" style="width:100%"></div></div>
+          <span class="text-xs" style="width:30px;text-align:right;">210</span>
+        </div>
+        <div class="progress-row">
+          <span class="text-xs" style="width:45px;">Sel</span>
+          <div class="progress-bar"><div class="progress-fill orange" style="width:95%"></div></div>
+          <span class="text-xs" style="width:30px;text-align:right;">200</span>
+        </div>
+        <div class="progress-row">
+          <span class="text-xs" style="width:45px;">Rab</span>
+          <div class="progress-bar"><div class="progress-fill orange" style="width:110%"></div></div>
+          <span class="text-xs" style="width:30px;text-align:right;">230</span>
+        </div>
+        <div class="progress-row">
+          <span class="text-xs" style="width:45px;">Kam</span>
+          <div class="progress-bar"><div class="progress-fill orange" style="width:90%"></div></div>
+          <span class="text-xs" style="width:30px;text-align:right;">190</span>
+        </div>
+        <div class="progress-row">
+          <span class="text-xs" style="width:45px;">Jum</span>
+          <div class="progress-bar"><div class="progress-fill orange" style="width:100%"></div></div>
+          <span class="text-xs" style="width:30px;text-align:right;">210</span>
+        </div>
+      </div>
+
+      <div style="background:#F5EDE4;height:1px;margin:14px 0;"></div>
+      <button class="btn btn-primary btn-block" onclick="alert('Form tambah resep baru')">➕ Tambah Produk Baru</button>
+    </div>
+
+    <!-- Early Warning Harga -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">📈</span>
+        <h3>Peringatan Harga Bahan</h3>
+      </div>
+      <div class="insight insight-alert">
+        <span class="insight-icon">🚨</span>
+        <div class="insight-text">
+          <strong>Kedelai — naik 12% (7 hari)</strong>
+          <p>Rp 11.500 → Rp 12.900/kg. Confidence 85%. Rekomendasi: <strong>Beli stok 2 minggu SEKARANG</strong>.</p>
+        </div>
+      </div>
+      <div class="insight insight-info">
+        <span class="insight-icon">✅</span>
+        <div class="insight-text">
+          <strong>Minyak goreng — stabil</strong>
+          <p>Rp 15.000/L (tidak berubah 14 hari). Tidak perlu aksi.</p>
+        </div>
+      </div>
+      <div class="insight insight-warning">
+        <span class="insight-icon">📊</span>
+        <div class="insight-text">
+          <strong>Cabai — turun 8% minggu ini</strong>
+          <p>Rp 42.000 → Rp 38.500/kg. Jika Ibu pakai cabai, ini saat yang baik untuk beli.</p>
+        </div>
+      </div>
+      <div class="text-xs" style="color:var(--text-secondary);margin-top:8px;">Sumber: PHIPS Bapanas (data 17/07/2026)</div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: KIRIM ===== -->
+  <div class="tab-content" id="tab-kirim">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">📍</span>
+        <h3>Rute Kirim Pagi Ini</h3>
+        <span class="badge badge-green">⏱ 42 menit</span>
+      </div>
+
+      <div class="route-step">
+        <div class="route-num">1</div>
+        <div class="route-info">
+          <div class="name">Warung A — 30 tempe</div>
+          <div class="detail">Jl. Mawar No. 12 • 8 menit</div>
+          <div class="flag badge badge-green">✅ shelf-life aman</div>
+        </div>
+      </div>
+      <div class="route-step">
+        <div class="route-num">2</div>
+        <div class="route-info">
+          <div class="name">Warung B — 50 tempe</div>
+          <div class="detail">Jl. Melati No. 45 • 12 menit</div>
+          <div class="flag badge badge-green">✅ shelf-life aman</div>
+        </div>
+      </div>
+      <div class="route-step">
+        <div class="route-num">3</div>
+        <div class="route-info">
+          <div class="name">Pasar C — 110 tempe</div>
+          <div class="detail">Pasar Induk Lamongan • 15 menit</div>
+          <div class="flag badge badge-yellow">⚠️ 3 tempe risiko basi — prioritaskan</div>
+        </div>
+      </div>
+      <div class="route-step">
+        <div class="route-num">4</div>
+        <div class="route-info">
+          <div class="name">Kantin D — 20 tempe</div>
+          <div class="detail">SMK N 1 Lamongan • 7 menit</div>
+          <div class="flag badge badge-orange">📉 pesanan turun 30%</div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary flex-1" onclick="alert('Rute dikonfirmasi! Navigasi ke titik 1.')">🗺️ Setuju Rute</button>
+        <button class="btn btn-outline flex-1" onclick="alert('Ubah urutan rute: seret titik')">✏️ Ubah Urutan</button>
+      </div>
+    </div>
+
+    <!-- Status Kirim -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">✅</span>
+        <h3>Status Pengiriman Hari Ini</h3>
+      </div>
+      <div class="list-item">
+        <div class="left">
+          <div class="label">Warung A</div>
+          <div class="sub">30 tempe • 07:45</div>
+        </div>
+        <span class="badge badge-green">✅ Terkirim</span>
+      </div>
+      <div class="list-item">
+        <div class="left">
+          <div class="label">Warung B</div>
+          <div class="sub">50 tempe • 08:02</div>
+        </div>
+        <span class="badge badge-green">✅ Terkirim</span>
+      </div>
+      <div class="list-item">
+        <div class="left">
+          <div class="label">Pasar C</div>
+          <div class="sub">110 tempe • —</div>
+        </div>
+        <span class="badge badge-yellow">🟡 Dalam perjalanan</span>
+      </div>
+      <div class="list-item">
+        <div class="left">
+          <div class="label">Kantin D</div>
+          <div class="sub">20 tempe • —</div>
+        </div>
+        <span class="badge badge-yellow">🟡 Belum dikirim</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: JUAL ===== -->
+  <div class="tab-content" id="tab-jual">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">🛒</span>
+        <h3>Pesanan Hari Ini</h3>
+        <span class="badge badge-orange">4 pelanggan</span>
+      </div>
+
+      <div class="list-item">
+        <div class="order-status" style="background:var(--success);"></div>
+        <div class="left">
+          <div class="label">Warung A — 30 tempe</div>
+          <div class="sub">Biasanya 30 • ✅ sama seperti biasanya</div>
+        </div>
+        <span class="badge badge-green">Terkirim</span>
+      </div>
+      <div class="list-item">
+        <div class="order-status" style="background:var(--success);"></div>
+        <div class="left">
+          <div class="label">Warung B — 50 tempe</div>
+          <div class="sub">Biasanya 50 • ✅ stabil</div>
+        </div>
+        <span class="badge badge-green">Terkirim</span>
+      </div>
+      <div class="list-item">
+        <div class="order-status" style="background:var(--success);"></div>
+        <div class="left">
+          <div class="label">Pasar C — 110 tempe</div>
+          <div class="sub">Biasanya 100 • ⬆️ naik 10% (mendekati Lebaran)</div>
+        </div>
+        <span class="badge badge-yellow">Dalam kirim</span>
+      </div>
+      <div class="list-item">
+        <div class="order-status" style="background:var(--warning);"></div>
+        <div class="left">
+          <div class="label">Kantin D — 20 tempe</div>
+          <div class="sub">Biasanya 30 • ⬇️ turun 33% — <span style="color:var(--danger);">cek pelanggan</span></div>
+        </div>
+        <span class="badge badge-yellow">Pending</span>
+      </div>
+
+      <button class="btn btn-outline btn-sm btn-block mt-8" onclick="alert('Copy pesanan dari kemarin')">📋 Copy dari Kemarin</button>
+      <button class="btn btn-primary btn-sm btn-block mt-8" onclick="alert('Form tambah pesanan baru')">➕ Tambah Pesanan</button>
+    </div>
+
+    <!-- Rekomendasi Harga -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">💰</span>
+        <h3>Rekomendasi Harga Jual</h3>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div class="metric-box flex-1">
+          <div class="num" style="font-size:1.2rem;">Rp 4.000</div>
+          <div class="label">Harga Minimal (margin 20%)</div>
+        </div>
+        <div class="metric-box flex-1" style="border:2px solid var(--primary);">
+          <div class="num" style="font-size:1.2rem;color:var(--primary);">Rp 5.000</div>
+          <div class="label">Harga Optimal (margin 36%)</div>
+        </div>
+      </div>
+      <div class="text-xs" style="color:var(--text-secondary);margin-top:8px;text-align:center;">Biaya produksi per tempe: Rp 3.200 • Harga pasar: Rp 4.500–Rp 5.500</div>
+    </div>
+
+    <!-- Analisis Pelanggan -->
+    <div class="card">
+      <div class="card-header">
+        <span class="icon">📊</span>
+        <h3>Analisis Pelanggan</h3>
+      </div>
+      <div class="metric-box" style="margin-bottom:10px;">
+        <div class="num" style="font-size:1rem;color:var(--text);">Warung B — 25% omzet</div>
+        <div class="label">Pelanggan Terbesar</div>
+      </div>
+      <div class="progress-row">
+        <span class="text-xs" style="width:70px;">Warung B</span>
+        <div class="progress-bar"><div class="progress-fill orange" style="width:25%"></div></div>
+        <span class="text-xs" style="width:40px;text-align:right;">25%</span>
+      </div>
+      <div class="progress-row">
+        <span class="text-xs" style="width:70px;">Pasar C</span>
+        <div class="progress-bar"><div class="progress-fill orange" style="width:22%"></div></div>
+        <span class="text-xs" style="width:40px;text-align:right;">22%</span>
+      </div>
+      <div class="progress-row">
+        <span class="text-xs" style="width:70px;">Warung A</span>
+        <div class="progress-bar"><div class="progress-fill orange" style="width:15%"></div></div>
+        <span class="text-xs" style="width:40px;text-align:right;">15%</span>
+      </div>
+      <div class="progress-row">
+        <span class="text-xs" style="width:70px;">Kantin D</span>
+        <div class="progress-bar"><div class="progress-fill red" style="width:10%"></div></div>
+        <span class="text-xs" style="width:40px;text-align:right;">10% ⬇️</span>
+      </div>
+      <div class="insight insight-warning mt-8">
+        <span class="insight-icon">⚠️</span>
+        <div class="insight-text">
+          <strong>Kantin D — turun 30% bulan ini</strong>
+          <p>Mungkin beli dari kompetitor. Coba tanya atau tawarkan produk baru.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="tab-dashboard">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-item" data-tab="tab-produksi">
+      <span class="nav-icon">🏭</span>
+      <span class="nav-label">Produksi</span>
+    </button>
+    <button class="nav-item" data-tab="tab-kirim">
+      <span class="nav-icon">📍</span>
+      <span class="nav-label">Kirim</span>
+    </button>
+    <button class="nav-item" data-tab="tab-jual">
+      <span class="nav-icon">🛒</span>
+      <span class="nav-label">Jual</span>
+    </button>
+  </nav>
+
+  <script>
+    // === Tanggal ===
+    const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const d = new Date();
+    document.getElementById('currentDate').textContent = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+
+    // === Bottom Nav ===
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById(this.dataset.tab).classList.add('active');
+      });
+    });
+
+    // === Chat ===
+    const chatResponses = {
+      'harga': '💡 Biaya produksi per tempe: Rp 3.200. Harga jual aman: Rp 4.000–Rp 5.000. Dengan harga pasar Rp 4.500–Rp 5.500, Ibu bisa jual Rp 5.000 dengan margin 36%.',
+      'jual': '💰 Rekomendasi harga jual tempe: minimal Rp 4.000 (margin 20%), optimal Rp 5.000 (margin 36%). Harga pasar saat ini Rp 4.500–Rp 5.500.',
+      'produksi': '🏭 Besok rekomendasi produksi: 210 tempe (confidence 87%). Naik 10% dari minggu lalu karena mendekati Lebaran.',
+      'stok': '📦 Stok kedelai: 50 kg (cukup 7 hari ✅). Ragi: 80 g (HABIS dalam 1 hari 🔴 — beli 100g Rp 5.000).',
+      'pelanggan': '📊 Top: Warung B (25%), Pasar C (22%), Warung A (15%). ⚠️ Kantin D turun 30% — mungkin ada masalah.',
+      'basi': '⚠️ 3 tempe untuk Pasar C berisiko basi jika tidak diprioritaskan. Shelf-life tempe 2 hari, estimasi kirim 15 menit — masih aman.',
+      'ragi': '🔴 Stok ragi tinggal 80g, cukup untuk 1 hari produksi (160 tempe). Beli 100g sekarang — Rp 5.000 di toko bahan kue.',
+      'lebaran': '🌙 H-7 Lebaran: rekomendasi naikkan produksi 40% (290 tempe/hari). Tahun lalu permintaan melonjak 40%!'
+    };
+
+    function sendChat() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim().toLowerCase();
+      const resp = document.getElementById('chatResponse');
+
+      if (!text) { resp.innerHTML = 'Silakan ketik pertanyaan, Bu 😊'; return; }
+
+      // Find best match
+      let answer = 'Maaf, saya belum paham. Coba tanya tentang: produksi, harga, stok, pelanggan, atau lebaran 😊';
+      for (const [key, val] of Object.entries(chatResponses)) {
+        if (text.includes(key)) { answer = val; break; }
+      }
+
+      resp.innerHTML = `<div style="background:#FDEBD0;padding:10px 14px;border-radius:10px;color:#2C3E50;">💬 ${answer}</div>`;
+      input.value = '';
+    }
+
+    // === Quick demo: hari otomatis ===
+    console.log('🌬️ Zephyrus v0.1 — Prototipe IRTP Dashboard');
+  </script>
+</body>
+</html>
