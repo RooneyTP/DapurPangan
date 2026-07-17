@@ -65,6 +65,8 @@ class CustomerBase(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     notes: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class CustomerResponse(CustomerBase):
     id: int
@@ -104,3 +106,22 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+# --- Route ---
+class RouteStop(BaseModel):
+    order: int
+    customer_id: int
+    customer_name: str
+    address: Optional[str] = None
+    quantity: int
+    product_name: str = "Tempe"
+    estimated_minutes: int
+    shelf_life_flag: str = "✅ aman"  # ✅ aman / ⚠️ risiko basi
+
+class RouteResponse(BaseModel):
+    date: str
+    total_stops: int
+    total_estimated_minutes: int
+    total_distance_km: float
+    stops: list[RouteStop]
