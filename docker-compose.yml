@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: zephyrus-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://zephyrus:zephyrus123@db:5432/zephyrus
+      - CORS_ORIGINS=["*"]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  db:
+    image: postgres:16-alpine
+    container_name: zephyrus-db
+    environment:
+      - POSTGRES_USER=zephyrus
+      - POSTGRES_PASSWORD=zephyrus123
+      - POSTGRES_DB=zephyrus
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zephyrus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
