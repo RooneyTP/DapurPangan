@@ -25,7 +25,10 @@ app.add_middleware(
 
 
 # --- Import routers ---
-from app.routers import production, stock, orders, chat
+from app.routers import production
+from app.routers import stock
+from app.routers import orders
+from app.routers import chat
 app.include_router(production.router)
 app.include_router(stock.router)
 app.include_router(orders.router)
