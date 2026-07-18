@@ -30,6 +30,7 @@ from app.routers import stock
 from app.routers import orders
 from app.routers import chat
 from app.routers import route
+from app.services.predictor import predictor as prod_predictor
 app.include_router(production.router)
 app.include_router(stock.router)
 app.include_router(orders.router)
@@ -93,6 +94,31 @@ def _seed_if_empty():
 
     db.commit()
     db.close()
+
+    # Seed predictor dengan data historis (fine-tuning awal)
+    _seed_predictor()
+
+
+def _seed_predictor(db: SessionLocal = None):
+    """Seed predictor dengan data produksi historis untuk fine-tuning awal."""
+    from app.database import SessionLocal as DB
+    s = db or DB()
+    try:
+        history = s.query(Production).order_by(Production.date).all()
+        for p in history:
+            prod_predictor.add_data_point(p.date, p.quantity)
+        n = len(history)
+        if n > 0:
+            # Test prediksi
+            test = prod_predictor.predict(date.today())
+            print(f"📊 Predictor: fine-tuned with {n} data points | "
+                  f"Prediksi besok: {test['prediction']} "
+                  f"(confidence {test['confidence_pct']}%)")
+        else:
+            print("📊 Predictor: no historical data yet")
+    finally:
+        if not db:
+            s.close()
 
 
 @app.get("/")
