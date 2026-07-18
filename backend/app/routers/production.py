@@ -22,13 +22,35 @@ def get_dashboard(db: Session = Depends(get_db)):
     if not product:
         return _mock_dashboard(day_name, today)
 
-    # Prediksi produksi (simple: rata2 7 hari terakhir + 10% buffer)
-    recent = db.query(Production).filter(
+    # Prediksi produksi — Prophet (ML dengan fine-tuning harian)
+    records_raw = db.query(Production).filter(
         Production.product_id == product.id,
-        Production.date >= today - timedelta(days=7)
-    ).all()
-    avg_qty = int(sum(p.quantity for p in recent) / max(len(recent), 1))
-    recommendation_qty = int(avg_qty * 1.1)
+        Production.date >= today - timedelta(days=60)  # data 60 hari
+    ).order_by(Production.date).all()
+
+    records = [
+        {"date": str(r.date), "quantity": r.quantity, "product_id": r.product_id}
+        for r in records_raw
+    ]
+
+    from app.services.predictor import train_and_predict
+    pred_result = train_and_predict(
+        product_id=product.id,
+        production_records=records,
+        forecast_days=1,
+    )
+
+    if pred_result["predictions"]:
+        p = pred_result["predictions"][0]
+        recommendation_qty = p["predicted"]
+        lower_bound = p["lower_bound"]
+        upper_bound = p["upper_bound"]
+        confidence = pred_result["confidence"]
+    else:
+        recommendation_qty = product.default_production
+        lower_bound = int(recommendation_qty * 0.9)
+        upper_bound = int(recommendation_qty * 1.1)
+        confidence = "●●●○○ 65%"
 
     # Stok alerts
     stocks = db.query(Stock).all()
@@ -78,9 +100,9 @@ def get_dashboard(db: Session = Depends(get_db)):
         recommendation={
             "product": product.name,
             "quantity": recommendation_qty,
-            "lower_bound": int(recommendation_qty * 0.9),
-            "upper_bound": int(recommendation_qty * 1.1),
-            "confidence": "●●●●○ 87%"
+            "lower_bound": lower_bound,
+            "upper_bound": upper_bound,
+            "confidence": confidence
         },
         stock_alerts=stock_alerts or [
             {"name": "Kedelai", "qty": "50 kg", "status": "🟢 AMAN"},
