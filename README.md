@@ -2,69 +2,54 @@
 
 > **Rebrand dari DapurPangan AI**  
 > Prototipe untuk COMPFEST 18 — AI Innovation Challenge  
-> Tema: *AI for the Backbone of the Economy*
+> Tema: *AI for the Backbone of the Economy*  
+> Fokus: **🏭 Smart Manufacturing** + **🛒 Smart Commerce**
 
-Zephyrus adalah platform dashboard terintegrasi untuk **Industri Rumah Tangga Pangan (IRTP)** — 39 juta produsen makanan skala rumahan di Indonesia.
+Zephyrus adalah platform dashboard untuk **Industri Rumah Tangga Pangan (IRTP)** — 39 juta produsen makanan skala rumahan di Indonesia.
 
-## Tiga Pilar
+## Dua Pilar Utama
 
 | Pilar | Fungsi |
 |---|---|
-| 🏭 **Smart Manufacturing** | Prediksi produksi, manajemen stok, peringatan harga bahan |
-| 📦 **Smart Logistics** | Optimasi rute kirim, status pengiriman, prediksi basi |
-| 🛒 **Smart Commerce** | Catatan pesanan, prediksi permintaan, rekomendasi harga |
+| 🏭 **Smart Manufacturing** | Prediksi produksi (ML fine-tuned), manajemen stok, peringatan harga bahan |
+| 🛒 **Smart Commerce** | Catatan pesanan, prediksi permintaan, rekomendasi harga, analisis pelanggan |
 
 ## Struktur Project
 
 ```
 Zephyrus/
-├── frontend/              ← PWA dashboard (HTML+CSS+JS)
-│   ├── index.html         ← Dashboard utama "Dapur Hari Ini"
-│   ├── js/app.js          ← API client (fetch dari backend)
-│   ├── manifest.json      ← PWA manifest
-│   └── sw.js              ← Service Worker (offline cache)
+├── frontend/              ← PWA dashboard (HTML+CSS+JS) [referensi, tunggu Figma]
 ├── backend/               ← FastAPI backend
 │   ├── app/
-│   │   ├── main.py        ← App entry + seed data
-│   │   ├── database.py    ← SQLAlchemy config
-│   │   ├── models.py      ← Database models
-│   │   ├── schemas.py     ← Pydantic schemas
+│   │   ├── main.py        ← App entry + seed data Bu Sumi
+│   │   ├── models.py      ← Database models (Product, Stock, Order, Customer...)
+│   │   ├── schemas.py     ← Pydantic response models
+│   │   ├── services/
+│   │   │   ├── predictor.py    ← ML fine-tuning prediksi produksi (scikit-learn)
+│   │   │   └── llm.py          ← LLM chat (OpenCodeZen + fallback)
 │   │   └── routers/
-│   │       ├── production.py  ← Dashboard & produksi
-│   │       ├── stock.py       ← Manajemen stok
-│   │       ├── orders.py      ← Pesanan & pelanggan
-│   │       └── chat.py        ← Chat AI sederhana
+│   │       ├── production.py   ← Dashboard & prediksi produksi
+│   │       ├── stock.py        ← CRUD stok bahan baku
+│   │       ├── orders.py       ← Pesanan & pelanggan
+│   │       └── chat.py         ← Tanya Zephyrus
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── docker-compose.yml     ← Backend + PostgreSQL
-├── .gitignore
 └── README.md
 ```
 
 ## Cara Jalankan
 
-### Opsi 1: Frontend Only (Static)
-Buka `frontend/index.html` langsung di browser.
-Data static/mock — cocok untuk demo cepat.
-
-### Opsi 2: Full Stack (Docker)
+### Opsi 1: Full Stack (Docker)
 
 ```bash
-# Clone / masuk folder project
 cd Zephyrus
-
-# Jalankan backend + database
 docker compose up -d
-
-# Buka:
-# - Dashboard: http://localhost:8000 (redirect ke /docs)
-# - API Docs:  http://localhost:8000/docs
-# - Frontend:  buka frontend/index.html di browser
+# API: http://localhost:8000/docs
+# Frontend: buka frontend/index.html
 ```
 
-API akan tersedia di `http://localhost:8000/api`.
-
-### Opsi 3: Backend Only (Dev)
+### Opsi 2: Backend Only
 ```bash
 cd backend
 pip install -r requirements.txt
@@ -73,36 +58,41 @@ uvicorn app.main:app --reload
 
 ## API Endpoints
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Modul |
 |---|---|---|
-| GET | `/api/dashboard` | Ringkasan "Dapur Hari Ini" |
-| GET | `/api/stocks/` | Daftar stok bahan baku |
-| POST | `/api/stocks/` | Tambah stok baru |
-| PATCH | `/api/stocks/{id}/adjust` | Ubah jumlah stok |
-| GET | `/api/customers` | Daftar pelanggan |
-| GET | `/api/orders` | Semua pesanan |
-| GET | `/api/orders/today` | Pesanan hari ini |
-| POST | `/api/orders` | Buat pesanan baru |
-| GET | `/api/orders/analytics` | Analisis pelanggan |
-| POST | `/api/chat` | Tanya Zephyrus (rule-based) |
+| GET | `/api/dashboard` | 🏭 Ringkasan + prediksi produksi |
+| GET/POST | `/api/stocks/` | 🏭 Manajemen stok |
+| GET/POST | `/api/orders/` | 🛒 Pesanan pelanggan |
+| GET | `/api/orders/today` | 🛒 Pesanan hari ini |
+| GET | `/api/orders/analytics` | 🛒 Analisis pelanggan |
+| POST | `/api/chat` | 🤖 Tanya Zephyrus (LLM + RAG) |
+| GET | `/docs` | 📋 Dokumentasi API (Swagger) |
+
+## Machine Learning & Fine-Tuning
+
+**FR-MFG-001 — Prediksi Produksi:**
+- Model: LinearRegression (scikit-learn) dengan feature engineering
+- Fine-tuning: retrain otomatis setiap ada data produksi baru
+- Fitur: hari, tanggal, bulan, flag event liburan
+- Output: prediksi + confidence score + upper/lower bound
+- Confidence meningkat seiring data: 63% (7 titik) → 91% (30 titik)
+
+**Chatbot:**
+- OpenCodeZen API (OpenAI-compatible) + rule-based fallback
+- Dual mode: coba LLM dulu, fallback ke response lokal jika offline
 
 ## Tech Stack
 
 | Layer | Teknologi |
 |---|---|
-| Frontend | HTML5 + CSS3 + Vanilla JS (PWA) |
+| Frontend | HTML5 + CSS3 + Vanilla JS (referensi) |
 | Backend | Python FastAPI + SQLAlchemy |
 | Database | PostgreSQL 16 |
+| ML Model | scikit-learn (fine-tuned daily) |
+| LLM | OpenCodeZen (OpenAI-compatible) |
 | Container | Docker Compose |
-| Deployment | `docker compose up` |
-
-## Persyaratan AIC COMPFEST 18
-
-- ✅ **MVP Scope**: UI input-output sederhana, backend sinkron, AI static inference
-- ✅ **Docker Compose**: Backend siap dijalankan dengan `docker compose up`
-- ✅ **Frontend**: PWA mobile-first, Bahasa Indonesia
-- ✅ **GitHub**: Source code di repository ini
 
 ---
 
-*Zephyrus v0.1 — Dibuat untuk COMPFEST 18 AI Innovation Challenge*
+*Zephyrus v0.2 — Fokus Smart Manufacturing + Smart Commerce*  
+*Dibuat untuk COMPFEST 18 AI Innovation Challenge*

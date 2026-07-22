@@ -29,13 +29,11 @@ from app.routers import production
 from app.routers import stock
 from app.routers import orders
 from app.routers import chat
-from app.routers import route
 from app.services.predictor import predictor as prod_predictor
 app.include_router(production.router)
 app.include_router(stock.router)
 app.include_router(orders.router)
 app.include_router(chat.router)
-app.include_router(route.router)
 
 
 @app.on_event("startup")
@@ -65,15 +63,11 @@ def _seed_if_empty():
     db.add(Stock(ingredient_name="Ragi", quantity=0.080, unit="kg", min_warning=0.2, min_critical=0.1))
     db.add(Stock(ingredient_name="Plastik kemasan", quantity=220, unit="pcs", min_warning=50, min_critical=20))
 
-    # 4. Customers with coordinates (Lamongan area)
-    wa = Customer(name="Warung A", address="Jl. Mawar No. 12", phone="0812-xxxx-xxxx",
-                  latitude=-7.1050, longitude=112.4100)
-    wb = Customer(name="Warung B", address="Jl. Melati No. 45", phone="0813-xxxx-xxxx",
-                  latitude=-7.1120, longitude=112.4200)
-    pc = Customer(name="Pasar C", address="Pasar Induk Lamongan", phone="-",
-                  latitude=-7.1150, longitude=112.4250)
-    kd = Customer(name="Kantin D", address="SMK N 1 Lamongan", phone="0814-xxxx-xxxx",
-                  latitude=-7.1080, longitude=112.4080)
+    # 4. Customers
+    wa = Customer(name="Warung A", address="Jl. Mawar No. 12", phone="0812-xxxx-xxxx")
+    wb = Customer(name="Warung B", address="Jl. Melati No. 45", phone="0813-xxxx-xxxx")
+    pc = Customer(name="Pasar C", address="Pasar Induk Lamongan", phone="-")
+    kd = Customer(name="Kantin D", address="SMK N 1 Lamongan", phone="0814-xxxx-xxxx")
     db.add_all([wa, wb, pc, kd])
     db.flush()
 

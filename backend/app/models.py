@@ -88,8 +88,6 @@ class Customer(Base):
     address = Column(String(200), nullable=True)
     phone = Column(String(20), nullable=True)
     notes = Column(Text, nullable=True)
-    latitude = Column(Float, nullable=True)   # untuk route optimizer
-    longitude = Column(Float, nullable=True)  # untuk route optimizer
     created_at = Column(DateTime, default=datetime.utcnow)
 
     orders = relationship("Order", back_populates="customer")
