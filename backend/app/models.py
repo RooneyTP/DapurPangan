@@ -1,4 +1,4 @@
-"""SQLAlchemy models for Zephyrus."""
+"""SQLAlchemy models for DapurPangan."""
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime, Text, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from datetime import date, datetime

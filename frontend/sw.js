@@ -1,4 +1,4 @@
-// Zephyrus — Service Worker (PWA offline cache)
+// DapurPangan — Service Worker (PWA offline cache)
 const CACHE_NAME = 'zephyrus-v1';
 const ASSETS = [
   'index.html',

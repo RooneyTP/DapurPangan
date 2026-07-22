@@ -1,4 +1,4 @@
-"""Zephyrus API — Main application."""
+"""DapurPangan API — Main application."""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
@@ -7,7 +7,7 @@ from datetime import date, timedelta
 import os
 
 app = FastAPI(
-    title="Zephyrus API",
+    title="DapurPangan API",
     description="Pusat Komando Digital untuk IRTP",
     version="0.1.0",
     docs_url="/docs",
@@ -118,7 +118,7 @@ def _seed_predictor(db: SessionLocal = None):
 @app.get("/")
 def root():
     return {
-        "app": "Zephyrus",
+        "app": "DapurPangan",
         "version": "0.1.0",
         "docs": "/docs",
         "dashboard": "/api/dashboard"

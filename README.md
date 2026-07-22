@@ -1,11 +1,10 @@
-# 🌬️ Zephyrus — Pusat Komando Digital untuk IRTP
+# 🌬️ DapurPangan — Pusat Komando Digital untuk IRTP
 
-> **Rebrand dari DapurPangan AI**  
 > Prototipe untuk COMPFEST 18 — AI Innovation Challenge  
 > Tema: *AI for the Backbone of the Economy*  
 > Fokus: **🏭 Smart Manufacturing** + **🛒 Smart Commerce**
 
-Zephyrus adalah platform dashboard untuk **Industri Rumah Tangga Pangan (IRTP)** — 39 juta produsen makanan skala rumahan di Indonesia.
+DapurPangan adalah platform dashboard untuk **Industri Rumah Tangga Pangan (IRTP)** — 39 juta produsen makanan skala rumahan di Indonesia.
 
 ## Dua Pilar Utama
 
@@ -17,7 +16,7 @@ Zephyrus adalah platform dashboard untuk **Industri Rumah Tangga Pangan (IRTP)**
 ## Struktur Project
 
 ```
-Zephyrus/
+DapurPangan/
 ├── frontend/              ← PWA dashboard (HTML+CSS+JS) [referensi, tunggu Figma]
 ├── backend/               ← FastAPI backend
 │   ├── app/
@@ -31,7 +30,7 @@ Zephyrus/
 │   │       ├── production.py   ← Dashboard & prediksi produksi
 │   │       ├── stock.py        ← CRUD stok bahan baku
 │   │       ├── orders.py       ← Pesanan & pelanggan
-│   │       └── chat.py         ← Tanya Zephyrus
+│   │       └── chat.py         ← Tanya DapurPangan
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── docker-compose.yml     ← Backend + PostgreSQL
@@ -43,7 +42,7 @@ Zephyrus/
 ### Opsi 1: Full Stack (Docker)
 
 ```bash
-cd Zephyrus
+cd DapurPangan
 docker compose up -d
 # API: http://localhost:8000/docs
 # Frontend: buka frontend/index.html
@@ -65,7 +64,7 @@ uvicorn app.main:app --reload
 | GET/POST | `/api/orders/` | 🛒 Pesanan pelanggan |
 | GET | `/api/orders/today` | 🛒 Pesanan hari ini |
 | GET | `/api/orders/analytics` | 🛒 Analisis pelanggan |
-| POST | `/api/chat` | 🤖 Tanya Zephyrus (LLM + RAG) |
+| POST | `/api/chat` | 🤖 Tanya DapurPangan (LLM + RAG) |
 | GET | `/docs` | 📋 Dokumentasi API (Swagger) |
 
 ## Machine Learning & Fine-Tuning
@@ -94,5 +93,5 @@ uvicorn app.main:app --reload
 
 ---
 
-*Zephyrus v0.2 — Fokus Smart Manufacturing + Smart Commerce*  
+*DapurPangan v0.2 — Fokus Smart Manufacturing + Smart Commerce*  
 *Dibuat untuk COMPFEST 18 AI Innovation Challenge*

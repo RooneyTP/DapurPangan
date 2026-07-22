@@ -1,4 +1,4 @@
--- Zephyrus seed data (opsional — main.py auto-seed via SQLAlchemy)
+-- DapurPangan seed data (opsional — main.py auto-seed via SQLAlchemy)
 -- File ini otomatis dijalankan oleh PostgreSQL saat first run.
 -- Tapi karena main.py juga seed via ORM, ini hanya fallback.
 

@@ -1,4 +1,4 @@
-"""LLM Service for Zephyrus — Dual mode: OpenCodeZen + rule-based fallback."""
+"""LLM Service for DapurPangan — Dual mode: OpenCodeZen + rule-based fallback."""
 import os, logging
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -23,7 +23,7 @@ FALLBACK_RESPONSES = {
     "lebaran": "🌙 H-7 Lebaran: rekomendasi naikkan produksi 40% (290 tempe/hari). Tahun lalu permintaan melonjak 40%!",
 }
 
-SYSTEM_PROMPT = """Kamu adalah asisten AI untuk Zephyrus, platform dashboard IRTP (Industri Rumah Tangga Pangan).
+SYSTEM_PROMPT = """Kamu adalah asisten AI untuk DapurPangan, platform dashboard IRTP (Industri Rumah Tangga Pangan).
 Kamu membantu Bu Sumi (produsen tempe dari Lamongan) dalam bahasa Indonesia yang santai dan hangat.
 
 Konteks Bu Sumi:
