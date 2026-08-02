@@ -29,11 +29,13 @@ from app.routers import production
 from app.routers import stock
 from app.routers import orders
 from app.routers import chat
+from app.routers import pricing
 from app.services.predictor import predictor as prod_predictor
 app.include_router(production.router)
 app.include_router(stock.router)
 app.include_router(orders.router)
 app.include_router(chat.router)
+app.include_router(pricing.router)
 
 
 @app.on_event("startup")
@@ -58,10 +60,13 @@ def _seed_if_empty():
     db.add(Recipe(product_id=tempe.id, ingredient_name="Kedelai", quantity_per_unit=0.1, unit="kg"))
     db.add(Recipe(product_id=tempe.id, ingredient_name="Ragi", quantity_per_unit=0.0005, unit="kg"))
 
-    # 3. Stocks
-    db.add(Stock(ingredient_name="Kedelai", quantity=50.0, unit="kg", min_warning=15.0, min_critical=5.0))
-    db.add(Stock(ingredient_name="Ragi", quantity=0.080, unit="kg", min_warning=0.2, min_critical=0.1))
-    db.add(Stock(ingredient_name="Plastik kemasan", quantity=220, unit="pcs", min_warning=50, min_critical=20))
+    # 3. Stocks (dengan harga per unit)
+    db.add(Stock(ingredient_name="Kedelai", quantity=50.0, unit="kg",
+                 price_per_unit=11500, min_warning=15.0, min_critical=5.0))
+    db.add(Stock(ingredient_name="Ragi", quantity=0.080, unit="kg",
+                 price_per_unit=62500, min_warning=0.2, min_critical=0.1))
+    db.add(Stock(ingredient_name="Plastik kemasan", quantity=220, unit="pcs",
+                 price_per_unit=150, min_warning=50, min_critical=20))
 
     # 4. Customers
     wa = Customer(name="Warung A", address="Jl. Mawar No. 12", phone="0812-xxxx-xxxx")

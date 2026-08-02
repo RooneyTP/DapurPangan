@@ -61,6 +61,7 @@ class Stock(Base):
     ingredient_name = Column(String(100), nullable=False, unique=True)
     quantity = Column(Float, nullable=False)
     unit = Column(String(20), default="kg")
+    price_per_unit = Column(Float, nullable=True)  # harga beli per unit (Rp)
     min_warning = Column(Float, default=5.0)  # threshold waspada
     min_critical = Column(Float, default=1.0)  # threshold kritis
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
