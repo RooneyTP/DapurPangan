@@ -17,7 +17,10 @@ DapurPangan adalah platform dashboard untuk **Industri Rumah Tangga Pangan (IRTP
 
 ```
 DapurPangan/
-├── frontend/              ← PWA dashboard (HTML+CSS+JS) [referensi, tunggu Figma]
+├── frontend/              ← Website oleh tim (landing page)
+│   ├── index.html         ← Halaman utama
+│   ├── style.css          ← Styling
+│   └── Image/             ← Logo & asset SVG
 ├── backend/               ← FastAPI backend
 │   ├── app/
 │   │   ├── main.py        ← App entry + seed data Bu Sumi
