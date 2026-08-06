@@ -1,0 +1,128 @@
+"""Pydantic schemas for DapurPangan API."""
+from pydantic import BaseModel
+from datetime import date, datetime
+from typing import Optional
+
+
+# --- Product ---
+class ProductBase(BaseModel):
+    name: str
+    category: str = "fermentasi"
+    shelf_life_days: int = 2
+    unit: str = "bungkus"
+    default_production: int = 210
+
+class ProductResponse(ProductBase):
+    id: int
+    created_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+
+
+# --- Recipe ---
+class RecipeResponse(BaseModel):
+    id: int
+    product_id: int
+    ingredient_name: str
+    quantity_per_unit: float
+    unit: str
+    class Config:
+        from_attributes = True
+
+
+# --- Stock ---
+class StockBase(BaseModel):
+    ingredient_name: str
+    quantity: float
+    unit: str = "kg"
+    price_per_unit: Optional[float] = None
+    min_warning: float = 5.0
+    min_critical: float = 1.0
+
+class StockResponse(StockBase):
+    id: int
+    status: str = "aman"
+    updated_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+
+
+# --- Pricing (FR-COM-002) ---
+class PriceBreakdown(BaseModel):
+    ingredient: str
+    quantity_per_unit: float
+    unit: str
+    price_per_unit: float
+    cost_per_unit: float
+
+class PriceRecommendation(BaseModel):
+    product_id: int
+    product_name: str
+    production_cost: float          # biaya produksi per unit (Rp)
+    breakdown: list[PriceBreakdown]
+    margin_pct: float               # margin target user
+    price_minimum: float            # harga minimal (margin target)
+    price_optimal: float            # harga optimal (margin + 10%)
+    market_price_low: float
+    market_price_high: float
+    note: str
+
+
+# --- Production ---
+class ProductionCreate(BaseModel):
+    product_id: int
+    date: date
+    quantity: int
+    notes: Optional[str] = None
+
+class ProductionResponse(ProductionCreate):
+    id: int
+    class Config:
+        from_attributes = True
+
+
+# --- Customer ---
+class CustomerBase(BaseModel):
+    name: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    notes: Optional[str] = None
+
+class CustomerResponse(CustomerBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+
+# --- Order ---
+class OrderCreate(BaseModel):
+    customer_id: int
+    product_id: int
+    date: date
+    quantity: int
+    status: str = "pending"
+
+class OrderResponse(OrderCreate):
+    id: int
+    customer_name: Optional[str] = None
+    product_name: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+
+# --- Dashboard ---
+class DashboardResponse(BaseModel):
+    greeting: str
+    date: str
+    recommendation: dict
+    stock_alerts: list
+    customer_insights: list
+    price_alerts: list
+
+
+# --- Chat ---
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    reply: str
