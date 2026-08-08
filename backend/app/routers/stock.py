@@ -1,6 +1,7 @@
 """Stock management endpoints."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models import Stock
@@ -35,9 +36,20 @@ def list_stocks(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=StockResponse)
 def create_stock(data: StockBase, db: Session = Depends(get_db)):
+    # Cek duplikat sebelum insert (hindari IntegrityError 500)
+    exists = db.query(Stock).filter(
+        Stock.ingredient_name == data.ingredient_name
+    ).first()
+    if exists:
+        raise HTTPException(409, f"Stok '{data.ingredient_name}' sudah ada")
+
     stock = Stock(**data.model_dump())
     db.add(stock)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, f"Stok '{data.ingredient_name}' sudah ada")
     db.refresh(stock)
     status = "aman"
     if stock.quantity < stock.min_critical:
