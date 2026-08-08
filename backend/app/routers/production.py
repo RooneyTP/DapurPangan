@@ -70,11 +70,9 @@ def get_dashboard(db: Session = Depends(get_db)):
             "note": "Cek apakah ada masalah?"
         })
 
-    # Price alerts (mock data dari PRD)
-    price_alerts = [
-        {"commodity": "Kedelai", "change": "naik 12%",
-         "detail": "Rp 11.500 → Rp 12.900/kg minggu depan. Stok cukup 3 hari — beli SEKARANG."},
-    ]
+    # Price alerts — dari service harga (Bapanas + fallback)
+    from app.services.prices import get_price_alerts
+    price_alerts = get_price_alerts()
 
     return DashboardResponse(
         greeting=f"🌅 Selamat pagi, Bu Sumi!",

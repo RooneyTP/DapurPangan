@@ -30,12 +30,14 @@ from app.routers import stock
 from app.routers import orders
 from app.routers import chat
 from app.routers import pricing
+from app.routers import prices
 from app.services.predictor import predictor as prod_predictor
 app.include_router(production.router)
 app.include_router(stock.router)
 app.include_router(orders.router)
 app.include_router(chat.router)
 app.include_router(pricing.router)
+app.include_router(prices.router)
 
 
 @app.on_event("startup")
