@@ -7,7 +7,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 API_KEY = os.getenv("OPencodeZen_API_KEY")
 BASE_URL = os.getenv("OPencodeZen_BASE_URL", "https://opencode.ai/zen/v1")
-MODEL = os.getenv("OPencodeZen_MODEL", "deepseek-v4-flash")
+MODEL = os.getenv("OPencodeZen_MODEL", "deepseek-v4-flash-free")
 
 logger = logging.getLogger("zephyrus.llm")
 
@@ -54,9 +54,9 @@ def get_llm_response(message: str) -> str:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": message},
             ],
-            max_tokens=300,
+            max_tokens=2000,
             temperature=0.7,
-            timeout=15,
+            timeout=90,
         )
         reply = resp.choices[0].message.content.strip()
         if reply:
