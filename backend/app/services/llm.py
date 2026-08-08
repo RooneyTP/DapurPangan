@@ -7,7 +7,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 API_KEY = os.getenv("OPencodeZen_API_KEY")
 BASE_URL = os.getenv("OPencodeZen_BASE_URL", "https://opencode.ai/zen/v1")
-MODEL = os.getenv("OPencodeZen_MODEL", "gpt-4o-mini")
+MODEL = os.getenv("OPencodeZen_MODEL", "deepseek-v4-flash")
 
 logger = logging.getLogger("zephyrus.llm")
 

@@ -78,17 +78,29 @@ def _seed_if_empty():
     db.add_all([wa, wb, pc, kd])
     db.flush()
 
-    # 5. Orders (7 hari terakhir)
+    # 5. Orders (14 hari terakhir — 7 hari lalu untuk baseline trend)
     today = date.today()
+    # Baseline: 7 hari sebelumnya (hari -14 s/d -8)
+    for i in range(7, 14):
+        d = today - timedelta(days=i)
+        db.add(Order(customer_id=wa.id, product_id=tempe.id, date=d, quantity=30, status="delivered"))
+        db.add(Order(customer_id=wb.id, product_id=tempe.id, date=d, quantity=50, status="delivered"))
+        db.add(Order(customer_id=pc.id, product_id=tempe.id, date=d, quantity=100, status="delivered"))
+        db.add(Order(customer_id=kd.id, product_id=tempe.id, date=d, quantity=35, status="delivered"))  # dulu 35/hr
+
+    # 7 hari terakhir — Kantin D turun 30→20
     for i in range(7):
         d = today - timedelta(days=6 - i)
         db.add(Order(customer_id=wa.id, product_id=tempe.id, date=d, quantity=30, status="delivered"))
         db.add(Order(customer_id=wb.id, product_id=tempe.id, date=d, quantity=50, status="delivered"))
         db.add(Order(customer_id=pc.id, product_id=tempe.id, date=d, quantity=100 + i * 5, status="delivered"))
-        qty_kd = max(15, 30 - i * 2)  # turun gradually
+        qty_kd = max(20, 30 - i * 2)  # turun gradually 30→20
         db.add(Order(customer_id=kd.id, product_id=tempe.id, date=d, quantity=qty_kd, status="delivered"))
 
-    # 6. Production history
+    # 6. Production history (14 hari — untuk training ML lebih baik)
+    for i in range(7, 14):
+        d = today - timedelta(days=i)
+        db.add(Production(product_id=tempe.id, date=d, quantity=200))
     for i in range(7):
         d = today - timedelta(days=6 - i)
         db.add(Production(product_id=tempe.id, date=d, quantity=200 + i * 5))

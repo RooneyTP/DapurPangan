@@ -14,6 +14,15 @@ from app.services.predictor import predictor
 router = APIRouter(prefix="/api", tags=["Dashboard"])
 
 
+def _fmt_qty(quantity: float, unit: str) -> str:
+    """Format kuantitas dengan baik: 50 kg, 80 g, 220 pcs (bukan 0.08 kg)."""
+    if unit == "kg" and quantity < 1:
+        return f"{int(quantity * 1000)} g"
+    if float(quantity).is_integer():
+        return f"{int(quantity)} {unit}"
+    return f"{quantity:.2f} {unit}"
+
+
 @router.get("/dashboard", response_model=DashboardResponse)
 def get_dashboard(db: Session = Depends(get_db)):
     """Ringkasan dashboard 'Dapur Hari Ini' — pakai ML prediction."""
@@ -39,36 +48,35 @@ def get_dashboard(db: Session = Depends(get_db)):
             status = "🟢 AMAN"
         stock_alerts.append({
             "name": s.ingredient_name,
-            "qty": f"{s.quantity} {s.unit}",
+            "qty": _fmt_qty(s.quantity, s.unit),
             "status": status
         })
 
-    # Customer insights
+    # Customer insights — berdasarkan total kuantitas, bukan jumlah record
     customer_insights = []
     customers = db.query(Customer).all()
     for c in customers:
         recent_orders = db.query(Order).filter(
             Order.customer_id == c.id,
-            Order.date >= today - timedelta(days=7)
-        ).count()
+            Order.date > today - timedelta(days=7)
+        ).all()
+        recent_qty = sum(o.quantity for o in recent_orders)
+
         prev_orders = db.query(Order).filter(
             Order.customer_id == c.id,
-            Order.date >= today - timedelta(days=14),
-            Order.date < today - timedelta(days=7)
-        ).count()
-        if prev_orders > 0 and recent_orders < prev_orders * 0.7:
+            Order.date <= today - timedelta(days=7),
+            Order.date > today - timedelta(days=14)
+        ).all()
+        prev_qty = sum(o.quantity for o in prev_orders)
+
+        if prev_qty > 0 and recent_qty < prev_qty * 0.8:
             customer_insights.append({
                 "name": c.name,
-                "trend": f"⬇️ turun {int((1 - recent_orders/prev_orders)*100)}%",
+                "trend": f"⬇️ turun {int((1 - recent_qty/prev_qty)*100)}%",
                 "note": "Cek apakah ada masalah?"
             })
 
-    if not customer_insights:
-        customer_insights.append({
-            "name": "Kantin D",
-            "trend": "⬇️ turun 30%",
-            "note": "Cek apakah ada masalah?"
-        })
+    # Hanya tampilkan insight yang benar-benar dari data — tanpa hardcode
 
     # Price alerts — dari service harga (Bapanas + fallback)
     from app.services.prices import get_price_alerts
