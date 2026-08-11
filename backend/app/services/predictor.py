@@ -55,14 +55,6 @@ class ProductionPredictor:
             f"Total: {len(self.y)} titik data."
         )
 
-    def add_bulk(self, data: list[tuple[date, float]]) -> None:
-        """Tambah banyak data produksi sekaligus (seed)."""
-        for d, q in data:
-            self.X.append(self._extract_features(d))
-            self.y.append(float(q))
-        self._retrain()
-        logger.info(f"Bulk load: {len(data)} titik data. Model siap.")
-
     def _retrain(self) -> None:
         """Fine-tune: retrain model dengan semua data yang ada."""
         n = len(self.X)

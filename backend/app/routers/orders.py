@@ -1,6 +1,6 @@
 """Orders & Customer endpoints."""
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import date, timedelta
+from datetime import date
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -91,49 +91,3 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
         customer_name=customer.name if customer else "Unknown",
         product_name=product.name if product else "Unknown"
     )
-
-
-@router.get("/orders/analytics")
-def order_analytics(db: Session = Depends(get_db)):
-    """Analisis pelanggan untuk insight.
-
-    Membandingkan TOTAL KUANTITAS 7 hari terakhir vs 7 hari sebelumnya.
-    Trend turun jika kuantitas turun >30%.
-    """
-    today = date.today()
-    customers = db.query(Customer).all()
-    insights = []
-    for c in customers:
-        # Total quantity 7 hari terakhir (hari ini s/d -6)
-        recent_orders = db.query(Order).filter(
-            Order.customer_id == c.id,
-            Order.date > today - timedelta(days=7)
-        ).all()
-        recent_qty = sum(o.quantity for o in recent_orders)
-
-        # Total quantity 7 hari sebelumnya (hari -7 s/d -13)
-        prev_orders = db.query(Order).filter(
-            Order.customer_id == c.id,
-            Order.date <= today - timedelta(days=7),
-            Order.date > today - timedelta(days=14)
-        ).all()
-        prev_qty = sum(o.quantity for o in prev_orders)
-
-        if prev_qty == 0:
-            trend = "🆕 data baru"
-        elif recent_qty < prev_qty * 0.8:
-            trend = f"⬇️ turun {int((1 - recent_qty/prev_qty)*100)}%"
-        elif recent_qty > prev_qty * 1.2:
-            trend = f"⬆️ naik {int((recent_qty/prev_qty - 1)*100)}%"
-        else:
-            trend = "✅ stabil"
-
-        insights.append({
-            "name": c.name,
-            "address": c.address,
-            "orders_7d": len(recent_orders),
-            "quantity_7d": recent_qty,
-            "quantity_prev_7d": prev_qty,
-            "trend": trend
-        })
-    return insights

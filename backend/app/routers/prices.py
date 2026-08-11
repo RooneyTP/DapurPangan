@@ -1,7 +1,7 @@
 """Price Router — Peringatan Harga Bahan Baku (FR-MFG-003)."""
 from fastapi import APIRouter
 
-from app.services.prices import fetch_prices, get_price_alerts, search_price
+from app.services.prices import fetch_prices, get_price_alerts
 
 router = APIRouter(prefix="/api/prices", tags=["Prices"])
 
@@ -20,12 +20,3 @@ def list_prices():
 def price_alerts():
     """Peringatan harga untuk dashboard."""
     return get_price_alerts()
-
-
-@router.get("/search")
-def price_search(q: str):
-    """Cari harga komoditas (dipakai chat AI)."""
-    result = search_price(q)
-    if result is None:
-        return {"found": False, "message": "Komoditas tidak ditemukan"}
-    return {"found": True, **result}

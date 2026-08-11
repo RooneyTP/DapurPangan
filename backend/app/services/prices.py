@@ -160,20 +160,3 @@ def get_price_alerts() -> list[dict]:
             })
 
     return alerts[:3]  # maksimal 3 alert biar dashboard tidak penuh
-
-
-def search_price(query: str) -> dict | None:
-    """Cari harga komoditas berdasarkan kata kunci (untuk chat)."""
-    q = query.lower()
-    prices = fetch_prices()
-    for key, cfg in MONITORED.items():
-        if any(a in q for a in cfg["alias"]):
-            info = prices.get(key)
-            if info:
-                return {
-                    "name": cfg["name"],
-                    "price": info["price"],
-                    "unit": info["unit"],
-                    "date": info["date"],
-                }
-    return None
