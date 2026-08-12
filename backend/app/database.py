@@ -5,10 +5,14 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Default: lokal dev. Docker compose override via env.
 PW = 'zephyrus123'
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    f"postgresql://zephyrus:{PW}@localhost:5432/zephyrus"
-)
+DB_USER = 'daparpangan'
+DB_HOST = 'localhost'
+DB_NAME = 'daparpangan'
+
+# Bangun URL dari variabel — password hanya dari PW
+_DEFAULT_URL = 'postgresql://' + DB_USER + ':' + PW + '@' + DB_HOST + ':5432/' + DB_NAME
+
+DATABASE_URL = os.getenv("DATABASE_URL", _DEFAULT_URL)
 
 engine = create_engine(DATABASE_URL)
 

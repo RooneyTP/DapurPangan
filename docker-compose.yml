@@ -3,11 +3,11 @@ version: '3.8'
 services:
   backend:
     build: ./backend
-    container_name: zephyrus-api
+    container_name: daparpangan-api
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://zephyrus:zephyrus123@db:5432/zephyrus
+      - DATABASE_URL=postgresql://daparpangan:zephyrus123@db:5432/daparpangan
       - CORS_ORIGINS=["*"]
     depends_on:
       db:
@@ -18,17 +18,17 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: zephyrus-db
+    container_name: daparpangan-db
     environment:
-      - POSTGRES_USER=zephyrus
+      - POSTGRES_USER=daparpangan
       - POSTGRES_PASSWORD=zephyrus123
-      - POSTGRES_DB=zephyrus
+      - POSTGRES_DB=daparpangan
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zephyrus"]
+      test: ["CMD-SHELL", "pg_isready -U daparpangan"]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from typing import Optional
 import logging
 
-logger = logging.getLogger("zephyrus.predictor")
+logger = logging.getLogger("daparpangan.predictor")
 
 
 class ProductionPredictor:
