@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetSection = document.querySelector(targetId);
 
         if(targetSection){
-            targetSection.style.display= 'block'
+            targetSection.style.display = (targetId === '#ai-chat') ? 'flex' : 'block';
         }
 
         menuItems.forEach(item => {
@@ -42,4 +42,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialHash = window.location.hash || '#ai-chat';
 
     switchPage(initialHash);
+
+    const promptPills = document.querySelectorAll('.prompt-template');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatMessages = document.querySelector('.chat-messages');
+
+    function scrollToBottom() {
+        if (chatMessages) {
+            chatMessages.scrollTo({
+                top: chatMessages.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    promptPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            if (chatInput) {
+                chatInput.value = pill.textContent.trim();
+                chatInput.focus();
+            }
+        });
+    });
+
+    function sendMessage(){
+        const text = chatInput.value.trim();
+        if(text == '') return;
+
+        const userHTML = `
+            <div class="message user-message" style="display: flex; justify-content: flex-end;">
+                <div style="background-color: #E07C25; color: #FFFFFF; padding: 14px 20px; border-radius: 18px 18px 2px 18px; max-width: 60%; font-size: 14px; line-height: 1.5;">
+                    ${text}
+                </div>
+            </div>
+        `;
+        chatMessages.insertAdjacentHTML('beforeend', userHTML);
+        chatInput.value = '';
+        scrollToBottom();
+
+        setTimeout(() => {
+            const aiHTML = `
+                <div class="message ai-message">
+                    <div class="bubble-ai">
+                        Terima kasih atas pertanyaannya! Saya sedang memproses data untuk jawaban "${text}".
+                    </div>
+                </div>
+        `;
+        chatMessages.insertAdjacentHTML('beforeend', aiHTML);
+            scrollToBottom();
+        }, 1000);
+    }
+    if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+    if (chatInput) {
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    }
 });

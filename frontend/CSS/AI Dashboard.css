@@ -22,6 +22,7 @@ body{
     width: calc(100% - 319px);
     min-height: 100vh;
     box-sizing: border-box;
+    position: fixed;
 }
 
 .page-content{
@@ -101,7 +102,7 @@ body{
     padding-left: 10px;
     align-items: center;
     border-radius: 15px;
-    transition: background-color 0.3 ease, color 0.3;
+    transition: background-color 0.3s ease, color 0.3s;
 }
 
 .isi a{
@@ -143,4 +144,122 @@ body{
     align-items: center;
     gap: 25px;
     margin-left: 25px;
+}
+
+#ai-chat{
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: #FAF7F4;    
+}
+
+#chat-body{
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 25px 35px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.chat-messages{
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-bottom: 20px;
+}
+
+.ai-message{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.bubble-ai{
+    background-color: #FFFFFF;
+    color: #222222;
+    padding: 16px 22px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 650px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.chat-footer{
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.quick-prompts{
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+}
+
+.prompt-template{
+    background-color: #FFFFFF;
+    border: 1px solid #E07C25;
+    color: #D36B15;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.prompt-template:hover{
+    background-color: #E07C25;
+    color: #FFFFFF;
+}
+
+.chat-input-container{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: transparent;
+}
+
+.chat-input-container input{
+    flex: 1;
+    height: 50px;
+    background-color: #FFFFFF;
+    border: 1px solid #EAEAEA;
+    border-radius: 14px;
+    padding: 0 20px;
+    font-size: 14px;
+    color: #333333;
+    outline: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.chat-input-container input::placeholder{
+    color: #A0A0A0;
+}
+
+#send-btn{
+    width: 50px;
+    height: 50px;
+    background-color: #EFA664;
+    border: none;
+    border-radius: 12px;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+#send-btn:hover{
+    background-color: #E07C25;
 }
