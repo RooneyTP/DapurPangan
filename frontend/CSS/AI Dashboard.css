@@ -14,9 +14,35 @@ body{
 #app-layout{
     display: flex;
     width: 100%;
+    min-height: 100vh;
+}
+
+#main-frame{
+    margin-left: 319px;
+    width: calc(100% - 319px);
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.page-content{
+    width: 100%;
+}
+
+.page-title{
+    display: flex;
+    align-items: center;
+    padding-left: 30px;
+    box-sizing: border-box;
+    width: 100%;
     height: 60px;
-    background-color: #FFFFFF;
-    border-bottom: solid 3px #FAF7F4;
+    background-color: #ffffff;
+}
+
+.page-title h4{
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #000000;
 }
 
 #Sidebar{
