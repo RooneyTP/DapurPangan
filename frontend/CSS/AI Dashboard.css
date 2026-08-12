@@ -1,0 +1,146 @@
+html, body{
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body{
+    background-color: #FAF7F4;
+    font-family: 'Poppins', 'Century Gothic', 'Segoe UI', sans-serif;
+    cursor:default;
+    user-select: none;
+}
+
+#app-layout{
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+#main-frame{
+    margin-left: 319px;
+    width: calc(100% - 319px);
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.page-content{
+    width: 100%;
+}
+
+.page-title{
+    display: flex;
+    align-items: center;
+    padding-left: 30px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 60px;
+    background-color: #ffffff;
+}
+
+.page-title h4{
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #000000;
+}
+
+#Sidebar{
+    background-color: #FFFFFF;
+    width: 319px;
+    height: 100vh;
+
+    top: 0;
+    left: 0;
+    z-index: 100;
+    position: fixed;
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    border-right:  solid 3px #FAF7F4;
+}
+
+#header-siderbar{
+    gap: 10px;
+    display: flex;
+    width: 100%;
+    height: 80px;
+    align-items: center;
+    border-bottom: solid 3px #FAF7F4;
+}
+
+#header-siderbar img{
+    margin-left: 25px;
+}
+
+#header-siderbar-teks h3{
+    margin: 0;
+    font-size: 20px;
+}
+
+#header-siderbar-teks p{
+    margin: 0;
+    font-size: 16px;
+    font-weight: 300;
+}
+
+#isi-sidebar{
+    margin-left: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 30px;
+    flex: 1;
+}
+
+.isi{
+    gap: 10px;
+    height: 50px;
+    width: 250px;
+    display: flex;
+    padding-left: 10px;
+    align-items: center;
+    border-radius: 15px;
+    transition: background-color 0.3 ease, color 0.3;
+}
+
+.isi a{
+    text-decoration: none;
+    font-size: 16px;
+    color: #000000;
+    transition: color;
+}
+
+.isi.aktif{
+    background-color: #E07C25;
+}
+
+.isi.aktif a{
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.isi.aktif img{
+    filter: invert(100%);
+}
+
+#kembali{
+    display: flex;
+    width: 100%;
+    height: 60px;
+    border-top: solid 3px #FAF7F4;
+}
+
+#kembali a{
+    color: #000000;
+    text-decoration: none;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+#kembali-teks{
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    margin-left: 25px;
+}
