@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollToBottom();
         }, 1000);
     }
+
     if (sendBtn) sendBtn.addEventListener('click', sendMessage);
     if (chatInput) {
         chatInput.addEventListener('keypress', (e) => {
@@ -100,5 +101,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    
+// Hitung
+    const btnHitung = document.getElementById("btn-hitung");
+    const inputNama = document.getElementById("input-nama");
+    const inputMargin = document.getElementById("input-margin");
+    const inputMin = document.getElementById("input-min");
+    const inputMax = document.getElementById("input-max");
+
+    const hasilHarga = document.getElementById("hasil-harga");
+    const hasilSubtext = document.getElementById("hasil-subtext");
+
+    btnHitung.addEventListener("click", function(){
+        const nama = inputNama.value.trim() || inputNama.placeholder;
+        const margin = parseFloat(inputMargin.value) || parseFloat(inputMargin.placeholder);
+        const min = parseFloat(inputMin.value) || parseFloat(inputMin.placeholder);
+        const max = parseFloat(inputMax.value) || parseFloat(inputMax.placeholder);
+
+        if(min > max){
+            alert("Harga Pasar Min tidak boleh lebih besar dari Harga Pasar Max!");
+            return;
+        }
+
+        let hargaRekomendasi = min + ((max-min) * (margin/100));
+
+        if(hargaRekomendasi > max){
+            hargaRekomendasi = max;
+        }
+
+        hargaRekomendasi = Math.round(hargaRekomendasi/100) * 100;
+        const formatHarga = new Intl.NumberFormat('id-ID').format(hargaRekomendasi);
+        hasilHarga.textContent = formatHarga;
+        hasilSubtext.textContent = `Berdasarkan margin target ${margin}% & analisis pasar untuk ${nama}`;
+    });
 });
