@@ -376,3 +376,62 @@ body{
 .harga-jual h2 {
     margin: 0;
 }
+
+.page-body{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.page-frame{
+    padding: 20px 32px;
+    width: 1100px;
+    background-color: #FFFFFF;
+    border-radius: 15px;
+}
+
+.page-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.btn-tambah{
+    font-size: 16px;
+    color: #FFFFFF;
+    background-color: #E07C25;
+    outline: none;
+    border: solid 1px #E07C25; 
+    border-radius: 10px;
+    height: 30px;
+    width: 150px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-tambah:hover{
+    background-color: #D36B15;
+}
+
+.btn-filter.active{
+    background-color: #E07C25;
+    color: #FFFFFF;
+    outline: none;
+    border: solid 1px #E07C25; 
+    border-radius: 10px;
+    height: 30px;
+    width: 80px;
+}
+
+.btn-filter{
+    background-color: #FAF7F4;
+    color: #6b7280;
+    outline: none;
+    border: solid 1px #FAF7F4; 
+    transition: all 0.2s ease;
+    border-radius: 10px;
+    height: 30px;
+    width: 80px;
+}

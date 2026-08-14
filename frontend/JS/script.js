@@ -133,4 +133,30 @@ document.addEventListener('DOMContentLoaded', () => {
         hasilHarga.textContent = formatHarga;
         hasilSubtext.textContent = `Berdasarkan margin target ${margin}% & analisis pasar untuk ${nama}`;
     });
+
+    const btnSemua_Bahan = document.getElementById('btn-semua-bahan');
+    const btnHari_Bahan = document.getElementById('btn-hari-bahan');
+
+    btnSemua_Bahan.addEventListener('click', function(){
+        btnSemua_Bahan.classList.add('active');
+        btnHari_Bahan.classList.remove('active');
+    });
+
+    btnHari_Bahan.addEventListener('click', function(){
+        btnHari_Bahan.classList.add('active');
+        btnSemua_Bahan.classList.remove('active');
+    });
+
+    const btnSemua_Pesanan = document.getElementById('btn-semua-pesanan');
+    const btnHari_Pesanan = document.getElementById('btn-hari-pesanan');
+
+    btnSemua_Pesanan.addEventListener('click', function(){
+        btnSemua_Pesanan.classList.add('active');
+        btnHari_Pesanan.classList.remove('active');
+    });
+
+    btnHari_Pesanan.addEventListener('click', function(){
+        btnSemua_Pesanan.classList.remove('active');
+        btnHari_Pesanan.classList.add('active');
+    });
 });
