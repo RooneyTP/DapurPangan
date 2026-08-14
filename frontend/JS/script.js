@@ -179,11 +179,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===================== STOK BAHAN =====================
-    async function loadStocks(){
+    let stocksCache = [];
+    async function loadStocks(filter = 'semua'){
         const listEl = document.getElementById('list-stok');
         if(!listEl) return;
         try {
-            const stocks = await apiGet('/stocks/');
+            if(filter === 'semua' || stocksCache.length === 0){
+                stocksCache = await apiGet('/stocks/');
+            }
+            const stocks = (filter === 'hari')
+                ? stocksCache.filter(s => s.status !== 'aman')  // yang perlu perhatian hari ini
+                : stocksCache;
             const statusBadge = (s) => {
                 if(s.status === 'kritis') return '<span style="color:#E74C3C;">🔴 KRITIS</span>';
                 if(s.status === 'waspada') return '<span style="color:#F39C12;">🟡 WASPADA</span>';
@@ -199,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${statusBadge(s)}
                     </div>
                 </div>
-            `).join('') || '<div class="box-list">Belum ada data stok.</div>';
+            `).join('') || '<div class="box-list">Tidak ada data untuk filter ini.</div>';
         } catch(e) {
             listEl.innerHTML = `<div class="box-list">⚠️ ${e.message}</div>`;
         }
@@ -233,11 +239,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===================== PESANAN =====================
-    async function loadOrders(){
+    async function loadOrders(filter = 'hari'){
         const listEl = document.getElementById('list-pesanan');
         if(!listEl) return;
         try {
-            const orders = await apiGet('/orders/today');
+            const path = (filter === 'hari') ? '/orders/today' : '/orders/';
+            const orders = await apiGet(path);
             listEl.innerHTML = orders.map(o => `
                 <div class="box-list">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
@@ -248,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="font-size:12px;">${o.date}</span>
                     </div>
                 </div>
-            `).join('') || '<div class="box-list">Belum ada pesanan hari ini.</div>';
+            `).join('') || '<div class="box-list">Belum ada pesanan.</div>';
         } catch(e) {
             listEl.innerHTML = `<div class="box-list">⚠️ ${e.message}</div>`;
         }
@@ -337,21 +344,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===================== FILTER TOGGLES =====================
-    function bindFilter(btnSemua, btnHari){
+    // ===================== FILTER TOGGLES (berfungsi memfilter data) =====================
+    function bindFilter(btnSemua, btnHari, onFilter){
         if(!btnSemua || !btnHari) return;
         btnSemua.addEventListener('click', function(){
             btnSemua.classList.add('active');
             btnHari.classList.remove('active');
+            if(onFilter) onFilter('semua');
         });
         btnHari.addEventListener('click', function(){
             btnHari.classList.add('active');
             btnSemua.classList.remove('active');
+            if(onFilter) onFilter('hari');
         });
     }
-    bindFilter(document.getElementById('btn-semua-bahan'), document.getElementById('btn-hari-bahan'));
-    bindFilter(document.getElementById('btn-semua-pesanan'), document.getElementById('btn-hari-pesanan'));
-    bindFilter(document.getElementById('btn-semua-pelanggan'), document.getElementById('btn-hari-pelanggan'));
+    // Stok: 'semua' = semua bahan, 'hari' = yang kritis/waspada
+    bindFilter(document.getElementById('btn-semua-bahan'), document.getElementById('btn-hari-bahan'), (f) => loadStocks(f));
+    // Pesanan: 'semua' = riwayat, 'hari' = pesanan hari ini
+    bindFilter(document.getElementById('btn-semua-pesanan'), document.getElementById('btn-hari-pesanan'), (f) => loadOrders(f));
+    // Pelanggan: data statis per-request, dua filter sama-sama ambil semua
+    bindFilter(document.getElementById('btn-semua-pelanggan'), document.getElementById('btn-hari-pelanggan'), (f) => loadCustomers());
+
+    // ===================== TOMBOL "TAMBAH DATA" (toggle form) =====================
+    // Setiap tombol .btn-tambah punya data-target → form id yang ditampilkan/di-sembunyikan
+    const btnTambahList = document.querySelectorAll('.btn-tambah');
+    btnTambahList.forEach(button => {
+        button.addEventListener('click', function(){
+            const targetId = this.getAttribute('data-target');
+            const targetForm = document.getElementById(targetId);
+            if(targetForm){
+                if(targetForm.hasAttribute('hidden')){
+                    targetForm.removeAttribute('hidden');
+                    this.textContent = 'Tutup Form';
+                } else {
+                    targetForm.setAttribute('hidden', '');
+                    this.textContent = 'Tambah Data';
+                }
+            }
+        });
+    });
 
     // ===================== INIT LOAD =====================
     loadStocks();
