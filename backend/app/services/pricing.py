@@ -68,10 +68,12 @@ def recommend_price(
     # Harga minimal: cukup margin target
     price_min = round(cost * (1 + margin_pct / 100))
 
-    # Harga optimal: margin lebih tinggi (+10pp), tapi tidak overprice pasar
-    optimal_margin = margin_pct + 10
-    price_opt_raw = round(cost * (1 + optimal_margin / 100))
-    price_opt = min(price_opt_raw, market_high)
+    # Harga optimal: kompetitif DI DALAM rentang pasar.
+    # - Kalau pasar mendukung harga lebih tinggi dari margin minimal → pakai harga pasar
+    #   (margin lebih besar, tetap kompetitif)
+    # - Kalau biaya produksi sudah di atas pasar → patok di batas pasar atas
+    # - Tidak pernah di bawah market_low (buang margin) dan tidak pernah di atas market_high (tidak kompetitif)
+    price_opt = min(max(price_min, market_low), market_high)
 
     # Saran naratif
     margin_opt_actual = ((price_opt - cost) / cost * 100) if cost > 0 else 0

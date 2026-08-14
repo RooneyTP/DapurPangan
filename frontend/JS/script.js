@@ -1,5 +1,13 @@
 // DapurPangan — Frontend integration with FastAPI backend
-const API = 'http://localhost:8000/api';
+// API base otomatis: pakai host yang sama dengan halaman (kalau frontend
+// disajikan dari host lain), fallback ke localhost:8000 untuk dev.
+const API = (() => {
+    const h = window.location.hostname;
+    if (h && h !== 'localhost' && h !== '127.0.0.1' && h !== '') {
+        return `http://${h}:8000/api`;
+    }
+    return 'http://localhost:8000/api';
+})();
 
 document.addEventListener('DOMContentLoaded', () => {
     // ===================== SIDEBAR NAVIGATION =====================
