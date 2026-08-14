@@ -77,12 +77,22 @@ def recommend_price(
 
     # Saran naratif
     margin_opt_actual = ((price_opt - cost) / cost * 100) if cost > 0 else 0
-    note = (
-        f"Biaya produksi per {product.unit}: Rp {cost:,.0f}. "
-        f"Harga jual minimal Rp {price_min:,.0f} (margin {margin_pct:.0f}%). "
-        f"Harga optimal Rp {price_opt:,.0f} (margin {margin_opt_actual:.0f}% — "
-        f"kompetitif di pasar Rp {market_low:,.0f}-Rp {market_high:,.0f})."
-    )
+    # Penjelasan: kalau harga optimal = market_low (bukan cost-based), beri tahu user
+    if price_opt >= market_low and price_min < market_low:
+        note = (
+            f"Biaya produksi per {product.unit}: Rp {cost:,.0f}. "
+            f"Margin target {margin_pct:.0f}% → harga minimal Rp {price_min:,.0f}. "
+            f"Tapi pasar mendukung harga Rp {market_low:,.0f}-Rp {market_high:,.0f}, "
+            f"jadi rekomendasi optimal: Rp {price_opt:,.0f} (masih di bawah harga pasar — "
+            f"peluang margin aktual {margin_opt_actual:.0f}%)."
+        )
+    else:
+        note = (
+            f"Biaya produksi per {product.unit}: Rp {cost:,.0f}. "
+            f"Harga jual minimal Rp {price_min:,.0f} (margin {margin_pct:.0f}%). "
+            f"Harga optimal Rp {price_opt:,.0f} — kompetitif di pasar "
+            f"Rp {market_low:,.0f}-Rp {market_high:,.0f}."
+        )
 
     return {
         "product_id": product.id,

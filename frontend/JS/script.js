@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return res.json();
     }
-    const rupiah = (n) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+    const rupiah = (n) => 'Rp ' + Math.round(Number(n || 0)).toLocaleString('id-ID');
 
     // ===================== CHAT AI =====================
     const promptPills = document.querySelectorAll('.prompt-template');
@@ -164,13 +164,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if(hasilSubtext) hasilSubtext.textContent = 'Menghubungi AI DapurPangan...';
 
         try {
-            const data = await apiGet(`/pricing/recommendation?product_id=1&margin_pct=${margin}&market_low=${min}&market_high=${max}`);
+            // Cari produk by nama (biar input nama benar-benar berfungsi)
+            let productId = 1;
+            const namaInput = inputNama.value.trim();
+            if(namaInput && namaInput !== inputNama.placeholder){
+                const products = await apiGet('/products');
+                const found = products.find(p => p.name.toLowerCase() === namaInput.toLowerCase());
+                if(!found){
+                    if(hasilHarga) hasilHarga.textContent = '—';
+                    if(hasilSubtext) hasilSubtext.textContent = `⚠️ Produk "${namaInput}" tidak ditemukan. Produk tersedia: ${products.map(p => p.name).join(', ')}.`;
+                    return;
+                }
+                productId = found.id;
+            }
+            const data = await apiGet(`/pricing/recommendation?product_id=${productId}&margin_pct=${margin}&market_low=${min}&market_high=${max}`);
             if(hasilHarga) hasilHarga.textContent = rupiah(data.price_optimal);
             if(hasilSubtext){
                 hasilSubtext.textContent =
                     `Biaya produksi ${rupiah(data.production_cost)} per unit. ` +
                     `Harga minimal ${rupiah(data.price_minimum)} (margin ${data.margin_pct}%). ` +
-                    `Rekomendasi AI untuk ${nama}: ${rupiah(data.price_optimal)} (kompetitif di pasar ${rupiah(data.market_price_low)}-${rupiah(data.market_price_high)}).`;
+                    `Rekomendasi AI untuk ${data.product_name}: ${rupiah(data.price_optimal)} (kompetitif di pasar ${rupiah(data.market_price_low)}-${rupiah(data.market_price_high)}).`;
             }
         } catch(e) {
             if(hasilHarga) hasilHarga.textContent = '—';
