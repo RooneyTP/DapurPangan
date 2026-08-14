@@ -52,31 +52,52 @@ PREV_PRICES = {
 
 BAPANAS_API = "https://panelharga.badanpangan.go.id/harga-pangan/"
 
+# Cache sederhana: simpan hasil fetch 15 menit supaya dashboard tidak lambat
+_cache = {"data": None, "ts": 0.0}
+CACHE_TTL_SECONDS = 15 * 60
+
+# Failure breaker: kalau Bapanas gagal, jangan coba lagi 5 menit (dashboard tetap cepat)
+_fail = {"ts": 0.0}
+FAIL_COOLDOWN_SECONDS = 5 * 60
+
 
 def fetch_prices() -> dict:
-    """Coba ambil harga real dari Bapanas. Gagal → fallback internal.
+    """Coba ambil harga real dari Bapanas (cache 15 menit + cooldown saat gagal).
 
     Returns dict: {key: {"name", "price", "unit", "date"}}
     """
+    import time
+    now = time.time()
+    # 1) Pakai cache kalau masih segar
+    if _cache["data"] is not None and (now - _cache["ts"]) < CACHE_TTL_SECONDS:
+        return _cache["data"]
+    # 2) Jangan coba network lagi kalau baru gagal (dalam cooldown)
+    if now - _fail["ts"] < FAIL_COOLDOWN_SECONDS:
+        return dict(FALLBACK_PRICES)
+
     try:
         req = urllib.request.Request(
             BAPANAS_API,
             headers={"User-Agent": "Mozilla/5.0 (DapurPangan/0.2)"},
             method="GET",
         )
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=4) as resp:
             raw = resp.read().decode("utf-8", errors="ignore")
 
         # Upaya parse JSON (Bapanas punya beberapa varian endpoint)
         try:
             data = json.loads(raw)
-            return _parse_bapanas(data)
+            result = _parse_bapanas(data)
+            _cache["data"] = result
+            _cache["ts"] = now
+            return result
         except json.JSONDecodeError:
             logger.info("Bapanas: respons bukan JSON murni — pakai fallback")
             return dict(FALLBACK_PRICES)
 
     except Exception as e:
         logger.warning(f"Bapanas tidak tersedia ({e}) — pakai fallback")
+        _fail["ts"] = now  # aktifkan cooldown supaya request berikutnya instan
         return dict(FALLBACK_PRICES)
 
 
