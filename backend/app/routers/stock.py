@@ -26,6 +26,7 @@ def list_stocks(db: Session = Depends(get_db)):
             ingredient_name=s.ingredient_name,
             quantity=s.quantity,
             unit=s.unit,
+            price_per_unit=s.price_per_unit,
             min_warning=s.min_warning,
             min_critical=s.min_critical,
             status=status,

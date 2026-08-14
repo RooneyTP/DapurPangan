@@ -26,7 +26,7 @@ def create_customer(data: CustomerBase, db: Session = Depends(get_db)):
 
 
 # --- Orders ---
-@router.get("/orders", response_model=list[OrderResponse])
+@router.get("/orders/", response_model=list[OrderResponse])
 def list_orders(db: Session = Depends(get_db)):
     orders = db.query(Order).order_by(Order.date.desc()).limit(50).all()
     result = []
@@ -67,7 +67,7 @@ def today_orders(db: Session = Depends(get_db)):
     return result
 
 
-@router.post("/orders", response_model=OrderResponse)
+@router.post("/orders/", response_model=OrderResponse)
 def create_order(data: OrderCreate, db: Session = Depends(get_db)):
     # Validasi FK — customer & product harus ada (hindari orphan data)
     customer = db.query(Customer).filter(Customer.id == data.customer_id).first()
