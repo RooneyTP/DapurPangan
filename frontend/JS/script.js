@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
+//chat
     const initialHash = window.location.hash || '#ai-chat';
 
     switchPage(initialHash);
@@ -134,6 +134,26 @@ document.addEventListener('DOMContentLoaded', () => {
         hasilSubtext.textContent = `Berdasarkan margin target ${margin}% & analisis pasar untuk ${nama}`;
     });
 
+//btn tambah
+    const btnTambahList = document.querySelectorAll('.btn-tambah');
+    btnTambahList.forEach(button => {
+        button.addEventListener('click', function(){
+            const targetId = this.getAttribute('data-target');
+            const targetForm = document.getElementById(targetId);
+
+            if(targetForm){
+                if(targetForm.hasAttribute('hidden')){
+                    targetForm.removeAttribute('hidden');
+                    this.textContent = 'Tutup Form';
+                }else{
+                    targetForm.setAttribute('hidden', '');
+                    this.textContent ='Tambah Data';
+                }
+            }
+        });
+    });
+
+//Stok Bahan
     const btnSemua_Bahan = document.getElementById('btn-semua-bahan');
     const btnHari_Bahan = document.getElementById('btn-hari-bahan');
 
@@ -147,6 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSemua_Bahan.classList.remove('active');
     });
 
+
+// Pesanan
     const btnSemua_Pesanan = document.getElementById('btn-semua-pesanan');
     const btnHari_Pesanan = document.getElementById('btn-hari-pesanan');
 
@@ -159,4 +181,18 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSemua_Pesanan.classList.remove('active');
         btnHari_Pesanan.classList.add('active');
     });
+// Pelanggan
+    const btnSemua_Pelanggan = document.getElementById('btn-semua-pelanggan');
+    const btnHari_Pelanggan = document.getElementById('btn-hari-pelanggan');
+
+    btnSemua_Pelanggan.addEventListener('click', function(){
+        btnSemua_Pelanggan.classList.add('active');
+        btnHari_Pelanggan.classList.remove('active');
+    });
+
+    btnHari_Pelanggan.addEventListener('click', function(){
+        btnSemua_Pelanggan.classList.remove('active');
+        btnHari_Pelanggan.classList.add('active');
+    });
+
 });
