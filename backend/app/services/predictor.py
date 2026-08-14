@@ -31,6 +31,15 @@ class ProductionPredictor:
         self.y: list[float] = []         # target values
         self.last_train_date: Optional[date] = None
 
+    def reset(self) -> None:
+        """Kosongkan data training (dipakai saat re-seed dari DB)."""
+        self.model = LinearRegression()
+        self.scaler = StandardScaler()
+        self.is_trained = False
+        self.X = []
+        self.y = []
+        self.last_train_date = None
+
     def _extract_features(self, d: date) -> list[float]:
         """Ekstrak fitur dari tanggal untuk prediksi."""
         return [

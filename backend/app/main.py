@@ -47,6 +47,9 @@ def startup():
     """Create tables + seed data on first run."""
     Base.metadata.create_all(bind=engine)
     _seed_if_empty()
+    # SELALU seed predictor dari DB (fine-tune ulang tiap restart) —
+    # jangan hanya saat DB kosong, karena restart server harus tetap punya model
+    _seed_predictor()
 
 
 def _seed_if_empty():
@@ -120,6 +123,8 @@ def _seed_predictor(db: SessionLocal = None):
     s = db or DB()
     try:
         history = s.query(Production).order_by(Production.date).all()
+        # Reset dulu supaya restart server tidak double-count data lama
+        prod_predictor.reset()
         for p in history:
             prod_predictor.add_data_point(p.date, p.quantity)
         n = len(history)
