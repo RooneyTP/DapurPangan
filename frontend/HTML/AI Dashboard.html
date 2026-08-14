@@ -38,7 +38,12 @@
 
                 <div class="isi">
                     <img src="../Image/Dashboard AI/Shopping cart.svg" alt="Pesanan & Pelanggan" style="height: 24px; width: 24px;">
-                    <a href="#pesanan-pelanggan">Pesanan & Pelanggan</a>
+                    <a href="#pesanan">Pesanan</a>
+                </div>
+
+                <div class="isi">
+                    <img src="../Image/Dashboard AI/Person.svg" alt="Pesanan & Pelanggan" style="height: 24px; width: 24px;">
+                    <a href="#pelanggan">Pelanggan</a>
                 </div>
 
             </div>
@@ -56,25 +61,277 @@
                 <div class="page-title">
                     <h4>AI Chat</h4>
                 </div>
+            
+                <div id="chat-body">
+                    <h2 class="chat-main-tittle">Chat AI DapurPangan</h2>
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message ai-message">
+                            <div class="bubble-ai">
+                                Halo! Saya asisten AI DapurPangan, Saya siap membantu menjawab pertanyaan seputar bisnis kuliner IRTP Anda. Apa yang ingin Anda tanyakan?
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-footer">
+                        <div class="quick-prompts">
+                            <button class="prompt-template">Berapa harga jual yang aman?</button>
+                            <button class="prompt-template">Stok bahan apa yang perlu segera dibeli?</button>
+                            <button class="prompt-template">Bagaimana cara meningkatkan penjualan?</button>
+                            <button class="prompt-template">Berapa jumlah yang harus saya produksi hari ini?</button>
+                        </div>
+
+                        <div class="chat-input-container">
+                            <input type="text" id="chat-input" placeholder="Silahkan Tanya Tentang Bisnis Anda">
+                            <button id="send-btn" aria-label="Kirim Pesan">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <div id="rekomendasi-harga" class="page-content">
                 <div class="page-title">
                     <h4>Rekomendasi Harga</h4>
                 </div>
+                
+                <div class="megabox">
+                    <div class="box">
+                        <h2 class="section-heading">Parameter Perhitungan</h2>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Nama Produk</label>
+                                <input type="text" id="input-nama" class="input-data" placeholder="Tempe">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Target Margin (%)</label>
+                                <input type="number" id="input-margin" class="input-data" placeholder="20">
+                            </div> 
+
+                            <div class="form-group">
+                                <label>Harga Pasar Min (Rp)</label>
+                                <input type="number" id="input-min" class="input-data" placeholder="4500">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Harga Pasar Max (Rp)</label>
+                                <input type="number" id="input-max" class="input-data" placeholder="5500">
+                            </div>
+                        </div>
+
+                        <div class="button-wrapper">
+                            <button id="btn-hitung" class="btn">Hitung Harga</button>
+                        </div>
+                    </div> 
+
+                    <!-- Result -->
+                    <div id="result-box" class="result-box">
+                        <div class="result-header">
+                            <h3>Hasil Rekomendasi Harga</h3>
+                            <span class="badge-status">Rekomendasi AI</span>
+                        </div>
+
+                        <div class="result-grid">
+                                <p class="label">Harga Jual Direkomendasikan</p>
+                                <div class="harga-jual">
+                                    <h2 class="Currency">Rp</h2>
+                                    <h2 id="hasil-harga" class="price">0</h2>
+                                </div>
+                                <p id="hasil-subtext" class="subtext">Berdasarkan margin target & analisis pasar</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <div id="stok-bahan" class="page-content">
                 <div class="page-title">
                     <h4>Stok Bahan</h4>
                 </div>
-            </div>
 
-            <div id="pesanan-pelanggan" class="page-content">
-                <div class="page-title">
-                    <h4>Pesanan & Pelanggan</h4>
+                <div id="page-stockbahan" class="page-body" >
+                    <div id="page-frame-stokbahan" class="page-frame">
+                        <div class="page-header">
+                            <h2 class="section-heading">Stok Bahan Baku</h2>
+                            <button class="btn-tambah" id="btn-tambah-bahan" data-target="tambah-bahan">Tambah Data</button>
+                        </div>
+
+                        <div class="page-main">
+                            <div id="filter-tabs-bahan" class="filter-tabs">
+                                <button id="btn-semua-bahan" class="btn-filter active">Semua</button>
+                                <button id="btn-hari-bahan" class="btn-filter">Hari Ini</button>
+                            </div>
+                        </div>
+
+                        <div class="box" id="tambah-bahan" hidden>
+                            <h2 class="section-heading">Tambah Bahan Baku</h2>
+                            <div class="form-grid">
+                                 <div class="form-group">
+                                    <label>Nama Bahan</label>
+                                    <input type="text" id="input-nama-bahan" class="input-data" placeholder="Gula">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Jumlah</label>
+                                    <input type="number" id="input-jumlah-bahan" class="input-data" placeholder="10">
+                                </div> 
+
+                                <div class="form-group">
+                                    <label>Satuan</label>
+                                    <select name="pilih-satuan" id="input-satuan-bahan" class="input-data">
+                                        <option value="">Pilih Satuan</option>
+                                        <option value="g">Gram (g)</option>
+                                        <option value="kg">Kilogram (Kg)</option>
+                                        <option value="liter">Liter</option>
+                                        <option value="lembar">Lembar</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Harga per Satuan (Rp)</label>
+                                    <input type="number" id="input-harga-bahan" class="input-data" placeholder="5500">
+                                </div>
+                            </div>
+
+                            <div class="button-wrapper">
+                                <button id="btn-simpan-bahan" class="btn">Simpan</button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="list-data" id="list-stok">
+                        <div class="box-list">
+                                
+                        </div>
+                    </div>
+
                 </div>
             </div>
+
+            <div id="pesanan" class="page-content">
+                <div class="page-title">
+                    <h4>Pesanan</h4>
+                </div>
+                
+                <div id="page-pesanan" class="page-body" >
+                    <div id="page-frame-pesanan" class="page-frame">
+                        <div class="page-header">
+                            <h2 class="section-heading">Pesanan</h2>
+                            <button class="btn-tambah" id="btn-tambah-pesanan" data-target="tambah-pesanan">Tambah Data</button>
+                        </div>
+
+                        <div class="page-main">
+
+                            <div id="filter-tabs-pesanan" class="filter-tabs">
+                                <button id="btn-semua-pesanan" class="btn-filter active">Semua</button>
+                                <button id="btn-hari-pesanan" class="btn-filter">Hari Ini</button>
+                            </div>
+
+                            <div class="box" id="tambah-pesanan" hidden>
+                                <h2 class="section-heading">Tambah Pesanan</h2>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Nama Pelanggan</label>
+                                        <input type="text" id="input-nama-pemesan" class="input-data" placeholder="adi">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Nama Produk</label>
+                                        <input type="text" id="input-produk-pesanan" class="input-data" placeholder="tempe">
+                                    </div> 
+
+                                    <div class="form-group">
+                                        <label>Jumlah Pesanan</label>
+                                        <input type="number" id="input-jumlah-pesanan" class="input-data" placeholder="10">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Tanggal</label>
+                                        <input type="date" id="input-tanggal-pesanan" class="input-data">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Harga per Satuan (Rp)</label>
+                                        <input type="number" id="input-harga-pesanan" class="input-data" placeholder="5500">
+                                    </div>    
+                                </div>
+
+                                <div class="button-wrapper">
+                                    <button id="btn-simpan-pesanan" class="btn">Simpan</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="list-data" id="list-pesanan">
+                        <div class="box-list">
+                                
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="pelanggan" class="page-content">
+                <div class="page-title">
+                    <h4>Pelanggan</h4>
+                </div>
+                
+                <div id="page-pelanggan" class="page-body">
+                    <div id="page-frame-pelanggan" class="page-frame">
+                        <div class="page-header">
+                            <h2 class="section-heading">Pelanggan</h2>
+                            <button class="btn-tambah" id="btn-tambah-pelanggan" data-target="tambah-pelanggan">Tambah Data</button>
+                        </div>
+
+                        <div class="page-main">
+                            <div id="filter-tabs-pelanggan" class="filter-tabs">
+                                <button id="btn-semua-pelanggan" class="btn-filter active">Semua</button>
+                                <button id="btn-hari-pelanggan" class="btn-filter">Hari Ini</button>
+                            </div>
+
+                            <div class="box" id="tambah-pelanggan" hidden>
+                                <h2 class="section-heading">Tambah Pelanggan</h2>
+                                <div class="form-grid">           
+                                    <div class="form-group">
+                                        <label>Nama Pelanggan</label>
+                                        <input type="text" id="input-nama-pelanggan" class="input-data" placeholder="adi">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Alamat</label>
+                                        <input type="text" id="input-Alamat-pelanggan" class="input-data" placeholder="Jl. Kenaga No. 3">
+                                    </div> 
+
+                                    <div class="form-group">
+                                        <label>No. HP</label>
+                                        <input type="tel" id="input-telepon" class="input-data" placeholder="081234567890" pattern="[0-9]*" inputmode="numeric" required>
+                                    </div>
+                                </div>
+
+                                <div class="button-wrapper">
+                                    <button id="btn-simpan-pelanggan" class="btn">Simpan</button>
+                                </div>
+
+                            </div>                    
+                        </div>
+                    </div>
+
+                    <div class="list-data" id="list-pelanggan">
+                        <div class="box-list">
+                                
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
         </div>
     </div>
 

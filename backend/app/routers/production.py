@@ -23,6 +23,22 @@ def _fmt_qty(quantity: float, unit: str) -> str:
     return f"{quantity:.2f} {unit}"
 
 
+@router.get("/products")
+def list_products(db: Session = Depends(get_db)):
+    """Daftar produk (untuk form pesanan & resep)."""
+    products = db.query(Product).all()
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "category": p.category,
+            "unit": p.unit,
+            "shelf_life_days": p.shelf_life_days,
+        }
+        for p in products
+    ]
+
+
 @router.get("/dashboard", response_model=DashboardResponse)
 def get_dashboard(db: Session = Depends(get_db)):
     """Ringkasan dashboard 'Dapur Hari Ini' — pakai ML prediction."""
