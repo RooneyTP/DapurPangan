@@ -84,9 +84,10 @@ uvicorn app.main:app --reload
 |---|---|---|
 | GET | `/api/dashboard` | 🏭 Ringkasan + prediksi produksi (ML fine-tuned) |
 | GET | `/api/products` | 🏭 Daftar produk |
-| GET/POST | `/api/stocks/` | 🏭 Manajemen stok (+ `PATCH /{id}/adjust`) |
+| GET/POST | `/api/stocks/` | 🏭 Manajemen stok (+ `PATCH /{stock_id}/adjust`) |
 | GET/POST | `/api/recipes/` | 🏭 CRUD resep produk |
-| GET | `/api/recipes/product/{id}` | 🏭 Bahan per produk |
+| GET | `/api/recipes/product/{product_id}` | 🏭 Bahan per produk |
+| PATCH/DELETE | `/api/recipes/{recipe_id}` | 🏭 Ubah/hapus bahan resep |
 | GET/POST | `/api/orders/` | 🛒 Pesanan pelanggan |
 | GET | `/api/orders/today` | 🛒 Pesanan hari ini |
 | GET/POST | `/api/customers` | 🛒 Pelanggan |
