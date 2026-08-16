@@ -74,6 +74,20 @@ def update_recipe(recipe_id: int, data: RecipeIn, db: Session = Depends(get_db))
     if data.quantity_per_unit <= 0:
         raise HTTPException(422, "quantity_per_unit harus > 0")
 
+    # Validasi product (hindari IntegrityError 500 dari FK palsu)
+    product = db.query(Product).filter(Product.id == data.product_id).first()
+    if not product:
+        raise HTTPException(404, f"Produk {data.product_id} tidak ditemukan")
+
+    # Cegah duplikat bahan (termasuk kalau rename ke bahan yang sudah ada)
+    exists = db.query(Recipe).filter(
+        Recipe.product_id == data.product_id,
+        Recipe.ingredient_name == data.ingredient_name,
+        Recipe.id != recipe_id,
+    ).first()
+    if exists:
+        raise HTTPException(409, f"Bahan '{data.ingredient_name}' sudah ada di resep produk ini")
+
     recipe.product_id = data.product_id
     recipe.ingredient_name = data.ingredient_name
     recipe.quantity_per_unit = data.quantity_per_unit

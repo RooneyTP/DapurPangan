@@ -3,6 +3,7 @@ import math
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 
 from app.database import get_db
 from app.models import Stock
@@ -38,9 +39,9 @@ def list_stocks(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=StockResponse)
 def create_stock(data: StockBase, db: Session = Depends(get_db)):
-    # Cek duplikat sebelum insert (hindari IntegrityError 500)
+    # Cek duplikat case-insensitive (hindari 'Kedelai' vs 'kedelai' dobel)
     exists = db.query(Stock).filter(
-        Stock.ingredient_name == data.ingredient_name
+        func.lower(Stock.ingredient_name) == data.ingredient_name.lower()
     ).first()
     if exists:
         raise HTTPException(409, f"Stok '{data.ingredient_name}' sudah ada")

@@ -15,7 +15,11 @@ app = FastAPI(
 
 # CORS — allow frontend from anywhere (PWA). Tanpa auth/cookie, jadi
 # allow_credentials=False (wildcard + credentials melanggar spec CORS)
-origins = eval(os.getenv("CORS_ORIGINS", '["*"]'))
+import json as _json
+try:
+    origins = _json.loads(os.getenv("CORS_ORIGINS", '["*"]'))
+except (ValueError, TypeError):
+    origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
