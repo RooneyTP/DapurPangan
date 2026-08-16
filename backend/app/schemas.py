@@ -4,32 +4,6 @@ from datetime import date, datetime
 from typing import Optional
 
 
-# --- Product ---
-class ProductBase(BaseModel):
-    name: str
-    category: str = "fermentasi"
-    shelf_life_days: int = 2
-    unit: str = "bungkus"
-    default_production: int = 210
-
-class ProductResponse(ProductBase):
-    id: int
-    created_at: Optional[datetime] = None
-    class Config:
-        from_attributes = True
-
-
-# --- Recipe ---
-class RecipeResponse(BaseModel):
-    id: int
-    product_id: int
-    ingredient_name: str
-    quantity_per_unit: float
-    unit: str
-    class Config:
-        from_attributes = True
-
-
 # --- Stock ---
 class StockBase(BaseModel):
     ingredient_name: str
@@ -66,19 +40,6 @@ class PriceRecommendation(BaseModel):
     market_price_low: float
     market_price_high: float
     note: str
-
-
-# --- Production ---
-class ProductionCreate(BaseModel):
-    product_id: int
-    date: date
-    quantity: int
-    notes: Optional[str] = None
-
-class ProductionResponse(ProductionCreate):
-    id: int
-    class Config:
-        from_attributes = True
 
 
 # --- Customer ---

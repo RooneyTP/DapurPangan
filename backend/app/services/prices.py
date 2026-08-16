@@ -93,6 +93,7 @@ def fetch_prices() -> dict:
             return result
         except json.JSONDecodeError:
             logger.info("Bapanas: respons bukan JSON murni — pakai fallback")
+            _fail["ts"] = now  # aktifkan cooldown supaya request berikutnya instan
             return dict(FALLBACK_PRICES)
 
     except Exception as e:
