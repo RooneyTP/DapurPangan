@@ -1,5 +1,5 @@
 """LLM Service for DapurPangan — Dual mode: OpenCodeZen + rule-based fallback."""
-import os, logging
+import os, logging, re
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -20,6 +20,7 @@ FALLBACK_RESPONSES = {
     "pelanggan": "📊 Top: Pasar C (±56%), Warung B (22%), Warung A (13%). ⚠️ Kantin D turun 30% — cek apakah ada masalah.",
     "basi": "⚠️ Tempe untuk Pasar C berisiko basi jika tidak diprioritaskan. Shelf-life tempe 2 hari, estimasi kirim 15 menit - masih aman.",
     "ragi": "🔴 Stok ragi tinggal 80g, cukup ±160 bungkus (kurang dari 1 hari produksi). Beli 100g sekarang.",
+    "penjualan": "📈 Untuk menaikkan penjualan: tawarkan pesanan rutin ke warung, beri harga grosir untuk pembelian banyak, dan pastikan produksi cukup di hari ramai (lihat prediksi produksi di dashboard).",
     "lebaran": "🌙 H-7 Lebaran: rekomendasi naikkan produksi 40% (290 tempe/hari). Tahun lalu permintaan melonjak 40%!",
 }
 
@@ -71,7 +72,8 @@ def get_llm_response(message: str) -> str:
 def _rule_based_fallback(message: str) -> str:
     """Rule-based fallback ketika API tidak tersedia."""
     msg = message.lower()
+    # Word-boundary matching: 'jual' tidak boleh match 'penjualan'
     for key, reply in FALLBACK_RESPONSES.items():
-        if key in msg:
+        if re.search(rf"\b{key}\b", msg):
             return reply
     return "Maaf, saya belum paham. Coba tanya tentang: produksi, harga, stok, pelanggan, atau lebaran 😊"

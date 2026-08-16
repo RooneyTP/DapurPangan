@@ -117,15 +117,20 @@ def _parse_bapanas(data) -> dict:
             price = item.get("harga", item.get("price"))
             if not price:
                 continue
+            # Pilih komoditas dengan alias TERPANJANG yang match —
+            # hindari 'Cabe Merah' salah masuk ke 'cabai rawit' (alias 'cabe')
+            best_key, best_len = None, 0
             for key, cfg in MONITORED.items():
-                if any(a in name for a in cfg["alias"]):
-                    result[key] = {
-                        "name": cfg["name"],
-                        "price": float(price),
-                        "unit": "kg",
-                        "date": str(date.today()),
-                    }
-                    break
+                for a in cfg["alias"]:
+                    if a in name and len(a) > best_len:
+                        best_key, best_len = key, len(a)
+            if best_key:
+                result[best_key] = {
+                    "name": MONITORED[best_key]["name"],
+                    "price": float(price),
+                    "unit": "kg",
+                    "date": str(date.today()),
+                }
     except Exception as e:
         logger.warning(f"Parse Bapanas gagal ({e}) — pakai fallback")
     return result
