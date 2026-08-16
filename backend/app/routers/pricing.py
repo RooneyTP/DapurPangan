@@ -13,14 +13,16 @@ router = APIRouter(prefix="/api/pricing", tags=["Pricing"])
 def get_price_recommendation(
     product_id: int = Query(1, description="ID produk"),
     margin_pct: float = Query(20.0, ge=0, le=100, description="Margin target (%)"),
-    market_low: float = Query(4500.0, description="Harga pasar terendah"),
-    market_high: float = Query(5500.0, description="Harga pasar tertinggi"),
+    market_low: float = Query(4500.0, ge=0, description="Harga pasar terendah"),
+    market_high: float = Query(5500.0, ge=0, description="Harga pasar tertinggi"),
     db: Session = Depends(get_db),
 ):
     """Rekomendasi harga jual: minimal + optimal berdasarkan biaya produksi.
 
     FR-COM-002: Berdasarkan harga bahan baku terkini + margin yang diinginkan.
     """
+    if market_high < market_low:
+        raise HTTPException(422, "Harga pasar tertinggi tidak boleh lebih kecil dari terendah")
     try:
         result = recommend_price(
             db=db,

@@ -13,12 +13,13 @@ app = FastAPI(
     docs_url="/docs",
 )
 
-# CORS — allow frontend from anywhere (PWA)
+# CORS — allow frontend from anywhere (PWA). Tanpa auth/cookie, jadi
+# allow_credentials=False (wildcard + credentials melanggar spec CORS)
 origins = eval(os.getenv("CORS_ORIGINS", '["*"]'))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

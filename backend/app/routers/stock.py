@@ -1,4 +1,5 @@
 """Stock management endpoints."""
+import math
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -62,6 +63,9 @@ def create_stock(data: StockBase, db: Session = Depends(get_db)):
 
 @router.patch("/{stock_id}/adjust")
 def adjust_stock(stock_id: int, delta: float, db: Session = Depends(get_db)):
+    # Tolak NaN/Inf — kalau dibiarkan, stok jadi 0/NULL (data korup permanen)
+    if not math.isfinite(delta):
+        raise HTTPException(422, "delta harus angka terbatas (bukan NaN/Infinity)")
     stock = db.query(Stock).filter(Stock.id == stock_id).first()
     if not stock:
         raise HTTPException(404, "Stok tidak ditemukan")

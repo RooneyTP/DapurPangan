@@ -11,15 +11,15 @@ MODEL = os.getenv("OPencodeZen_MODEL", "deepseek-v4-flash-free")
 
 logger = logging.getLogger("daparpangan.llm")
 
-# ===== Rule-based fallback responses =====
+# ===== Rule-based fallback responses (angka disinkronkan dengan data aktual) =====
 FALLBACK_RESPONSES = {
-    "harga": "💡 Biaya produksi per tempe: Rp 3.200. Harga jual aman: Rp 4.000-Rp 5.000. Dengan harga pasar Rp 4.500-Rp 5.500, Ibu bisa jual Rp 5.000 dengan margin 36%.",
-    "jual": "💰 Rekomendasi harga jual tempe: minimal Rp 4.000 (margin 20%), optimal Rp 5.000 (margin 36%). Harga pasar saat ini Rp 4.500-Rp 5.500.",
-    "produksi": "🏭 Besok rekomendasi produksi: 210 tempe (confidence 87%). Naik 10% dari minggu lalu karena mendekati Lebaran.",
-    "stok": "📦 Stok kedelai: 50 kg (cukup 7 hari ✅). Ragi: 80 g (HABIS dalam 1 hari 🔴 - beli 100g Rp 5.000). Plastik: 220 pcs (cukup 5 hari 🟡).",
-    "pelanggan": "📊 Top: Warung B (25%), Pasar C (22%), Warung A (15%). ⚠️ Kantin D turun 30% - mungkin ada masalah.",
-    "basi": "⚠️ 3 tempe untuk Pasar C berisiko basi jika tidak diprioritaskan. Shelf-life tempe 2 hari, estimasi kirim 15 menit - masih aman.",
-    "ragi": "🔴 Stok ragi tinggal 80g, cukup untuk 1 hari produksi (160 tempe). Beli 100g sekarang - Rp 5.000 di toko bahan kue.",
+    "harga": "💡 Biaya produksi per tempe: Rp 1.181. Harga jual minimal: Rp 1.418 (margin 20%). Dengan pasar Rp 4.500-Rp 5.500, rekomendasi optimal Rp 4.500.",
+    "jual": "💰 Rekomendasi harga jual tempe: minimal Rp 1.418 (margin 20%), optimal Rp 4.500 (masih di bawah pasar Rp 4.500-Rp 5.500).",
+    "produksi": "🏭 Besok rekomendasi produksi: 222 tempe (confidence 71%, dari 14 hari data).",
+    "stok": "📦 Stok kedelai: 50 kg (cukup ±2 hari produksi — beli segera). Ragi: 80 g (habis hari ini 🔴 — beli 100g). Plastik: 220 pcs (cukup ±1 hari 🟡).",
+    "pelanggan": "📊 Top: Pasar C (±56%), Warung B (22%), Warung A (13%). ⚠️ Kantin D turun 30% — cek apakah ada masalah.",
+    "basi": "⚠️ Tempe untuk Pasar C berisiko basi jika tidak diprioritaskan. Shelf-life tempe 2 hari, estimasi kirim 15 menit - masih aman.",
+    "ragi": "🔴 Stok ragi tinggal 80g, cukup ±160 bungkus (kurang dari 1 hari produksi). Beli 100g sekarang.",
     "lebaran": "🌙 H-7 Lebaran: rekomendasi naikkan produksi 40% (290 tempe/hari). Tahun lalu permintaan melonjak 40%!",
 }
 
@@ -27,10 +27,10 @@ SYSTEM_PROMPT = """Kamu adalah asisten AI untuk DapurPangan, platform dashboard 
 Kamu membantu Bu Sumi (produsen tempe dari Lamongan) dalam bahasa Indonesia yang santai dan hangat.
 
 Konteks Bu Sumi:
-- Usaha: Tempe Berkah Lamongan, produksi ~200-300 bungkus/hari
-- Bahan baku: Kedelai (50 kg stok), Ragi (80g — hampir habis)
-- Pelanggan: Warung A (30/hr), Warung B (50/hr), Pasar C (110/hr), Kantin D (20/hr — turun 30%)
-- Harga kedelai naik 12% minggu depan (Rp 11.500 → Rp 12.900/kg)
+- Usaha: Tempe Berkah Lamongan, produksi ~222 bungkus/hari (prediksi ML 14 hari terakhir)
+- Bahan baku: Kedelai (50 kg stok), Ragi (80g — habis kurang dari 1 hari)
+- Pelanggan: Warung A (30/hr), Warung B (50/hr), Pasar C (~115/hr), Kantin D (20/hr — turun 30%)
+- Harga kedelai naik 13% (Rp 10.200 → Rp 11.500/kg)
 - H-7 Lebaran: permintaan naik 40%
 
 Jawab dengan:

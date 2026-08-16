@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api", tags=["Dashboard"])
 def _fmt_qty(quantity: float, unit: str) -> str:
     """Format kuantitas dengan baik: 50 kg, 80 g, 220 pcs (bukan 0.08 kg)."""
     if unit == "kg" and quantity < 1:
-        return f"{int(quantity * 1000)} g"
+        return f"{round(quantity * 1000)} g"
     if float(quantity).is_integer():
         return f"{int(quantity)} {unit}"
     return f"{quantity:.2f} {unit}"

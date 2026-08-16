@@ -50,6 +50,14 @@ def create_recipe(data: RecipeIn, db: Session = Depends(get_db)):
     if data.quantity_per_unit <= 0:
         raise HTTPException(422, "quantity_per_unit harus > 0")
 
+    # Cegah duplikat bahan — biaya produksi bisa dobel kalau dibiarkan
+    exists = db.query(Recipe).filter(
+        Recipe.product_id == data.product_id,
+        Recipe.ingredient_name == data.ingredient_name,
+    ).first()
+    if exists:
+        raise HTTPException(409, f"Bahan '{data.ingredient_name}' sudah ada di resep produk ini")
+
     recipe = Recipe(**data.model_dump())
     db.add(recipe)
     db.commit()
