@@ -72,8 +72,11 @@ def get_llm_response(message: str) -> str:
 def _rule_based_fallback(message: str) -> str:
     """Rule-based fallback ketika API tidak tersedia."""
     msg = message.lower()
-    # Word-boundary matching: 'jual' tidak boleh match 'penjualan'
-    for key, reply in FALLBACK_RESPONSES.items():
+    # Urutan prioritas: konteks SPESIFIK dicek lebih dulu (lebaran, ragi, ...)
+    # lalu yang umum (stok, produksi, harga). Word-boundary: 'jual' != 'penjualan'.
+    priority = ["lebaran", "ragi", "penjualan", "basi", "pelanggan", "stok",
+                "produksi", "harga", "jual"]
+    for key in priority:
         if re.search(rf"\b{key}\b", msg):
-            return reply
+            return FALLBACK_RESPONSES[key]
     return "Maaf, saya belum paham. Coba tanya tentang: produksi, harga, stok, pelanggan, atau lebaran 😊"
