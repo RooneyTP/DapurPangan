@@ -1,5 +1,5 @@
 """Pydantic schemas for DapurPangan API."""
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import date, datetime
 from typing import Optional
 
@@ -33,7 +33,7 @@ class RecipeResponse(BaseModel):
 # --- Stock ---
 class StockBase(BaseModel):
     ingredient_name: str
-    quantity: float
+    quantity: float = Field(ge=0, description="Tidak boleh negatif")
     unit: str = "kg"
     price_per_unit: Optional[float] = None
     min_warning: float = 5.0
@@ -99,7 +99,7 @@ class OrderCreate(BaseModel):
     customer_id: int
     product_id: int
     date: date
-    quantity: int
+    quantity: int = Field(ge=1, description="Minimal 1")
     status: str = "pending"
 
 class OrderResponse(OrderCreate):

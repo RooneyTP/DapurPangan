@@ -110,9 +110,8 @@ def get_dashboard(db: Session = Depends(get_db)):
             "fine_tuned": pred.get("fine_tuned", False),
             "data_points": pred.get("data_points", 0),
         },
-        stock_alerts=stock_alerts or [
-            {"name": "Kedelai", "qty": "50 kg", "status": "🟢 AMAN"},
-            {"name": "Ragi", "qty": "80 g", "status": "🔴 KRITIS - BELI!"},
+        stock_alerts=stock_alerts if stock_alerts else [
+            {"name": "Belum ada stok tercatat", "qty": "-", "status": "⚪ KOSONG"}
         ],
         customer_insights=customer_insights,
         price_alerts=price_alerts,
