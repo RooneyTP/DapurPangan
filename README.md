@@ -1,10 +1,10 @@
-# DapurPangan — Pusat Komando Digital untuk IRTP
+# DapurPangan - Pusat Komando Digital untuk IRTP
 
-> Prototipe untuk COMPFEST 18 — AI Innovation Challenge 
+> Prototipe untuk COMPFEST 18 - AI Innovation Challenge 
 > Tema: *AI for the Backbone of the Economy* 
 > Fokus: **Smart Manufacturing** + **Smart Commerce**
 
-DapurPangan adalah platform dashboard untuk **Industri Rumah Tangga Pangan (IRTP)** — 39 juta produsen makanan skala rumahan di Indonesia.
+DapurPangan adalah platform dashboard untuk **Industri Rumah Tangga Pangan (IRTP)** - 39 juta produsen makanan skala rumahan di Indonesia.
 
 ## Prasyarat
 
@@ -12,7 +12,7 @@ Sebelum menjalankan, pastikan sudah install:
 
 | Opsi | Wajib Install | Catatan |
 |---|---|---|
-| **Opsi 1 (Docker)**| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Cara paling mudah — database & backend otomatis |
+| **Opsi 1 (Docker)**| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Cara paling mudah - database & backend otomatis |
 | **Opsi 2 (Tanpa Docker)**| [Python 3.11+](https://www.python.org/downloads/) | Untuk menjalankan backend langsung |
 | **Keduanya**| [Git](https://git-scm.com/downloads) | Untuk mengambil kode dari GitHub |
 
@@ -70,19 +70,19 @@ DapurPangan/
 
 ## Cara Jalankan
 
-### Opsi 1: Full Stack (Docker) — direkomendasikan
+### Opsi 1: Full Stack (Docker) - direkomendasikan
 
 > **Penting:** pastikan Docker Desktop sudah **terbuka & berjalan** (tunggu logo Docker di system tray hijau) sebelum lanjut.
 
 ```bash
-# 1. Setup API key chat (sekali saja, OPSIONAL — lihat penjelasan di bawah)
+# 1. Setup API key chat (sekali saja, OPSIONAL - lihat penjelasan di bawah)
 # Windows (CMD/PowerShell):
 copy backend\.env.example backend\.env
 # macOS / Linux / Git Bash:
 # cp backend/.env.example backend/.env
 # lalu edit backend/.env -> isi OPencodeZen_API_KEY (pakai Notepad/VS Code)
 
-# 2. Jalankan (butuh beberapa menit saat pertama kali — download image)
+# 2. Jalankan (butuh beberapa menit saat pertama kali - download image)
 docker compose up -d
 
 # 3. Cek backend hidup: buka http://localhost:8000/docs (harus muncul Swagger UI)
@@ -92,7 +92,7 @@ docker compose up -d
 
 > **Apa itu `.env` dan `OPencodeZen_API_KEY`?**
 > `.env` adalah file konfigurasi rahasia (tidak ikut di-upload ke GitHub). Isinya API key untuk chat AI.
-> - **Tidak punya API key? TIDAK MASALAH** — chat tetap bisa dipakai dengan jawaban bawaan (fallback), hanya kurang "cerdas".
+> - **Tidak punya API key? TIDAK MASALAH** - chat tetap bisa dipakai dengan jawaban bawaan (fallback), hanya kurang "cerdas".
 > - Mau key gratis: daftar di opencode.ai -> buat API key -> tempel ke `backend/.env` menggantikan `OPencodeZen_API_KEY=...`.
 
 > Data contoh (Bu Sumi: tempe, stok, 4 pelanggan, 14 hari pesanan) di-seed otomatis saat pertama kali jalan.
@@ -107,7 +107,7 @@ uvicorn app.main:app --reload
 # Dashboard: buka frontend/HTML/AI Dashboard.html di browser
 ```
 
-> Tanpa Docker, backend memakai database SQLite lokal (`backend/daparpangan.db`) — cukup untuk dicoba. Untuk produksi pakai Docker (PostgreSQL).
+> Tanpa Docker, backend memakai database SQLite lokal (`backend/daparpangan.db`) - cukup untuk dicoba. Untuk produksi pakai Docker (PostgreSQL).
 
 ## Troubleshooting
 
@@ -122,10 +122,10 @@ uvicorn app.main:app --reload
 
 ## Coba Fitur (Walkthrough 5 Menit)
 
-1. **Dashboard** — buka `http://localhost:8000/docs` -> expand `GET /api/dashboard` -> **Try it out** -> Execute. Lihat prediksi produksi, status stok, insight pelanggan.
-2. **Rekomendasi harga** — `GET /api/pricing/recommendation` -> Execute -> dapat harga jual minimal & optimal.
-3. **Chat AI** — buka `frontend/HTML/AI Dashboard.html` -> tab **AI Chat** -> tanya *"berapa produksi besok?"* atau *"stok apa yang perlu dibeli?"*.
-4. **Input data** — di dashboard HTML: tab **Stok Bahan** -> Tambah Data; tab **Pesanan** -> tambah pesanan baru.
+1. **Dashboard** - buka `http://localhost:8000/docs` -> expand `GET /api/dashboard` -> **Try it out** -> Execute. Lihat prediksi produksi, status stok, insight pelanggan.
+2. **Rekomendasi harga** - `GET /api/pricing/recommendation` -> Execute -> dapat harga jual minimal & optimal.
+3. **Chat AI** - buka `frontend/HTML/AI Dashboard.html` -> tab **AI Chat** -> tanya *"berapa produksi besok?"* atau *"stok apa yang perlu dibeli?"*.
+4. **Input data** - di dashboard HTML: tab **Stok Bahan** -> Tambah Data; tab **Pesanan** -> tambah pesanan baru.
 5. **Reset data** kalau sudah berantakan: lihat tabel Troubleshooting di atas.
 
 ## API Endpoints
@@ -149,15 +149,15 @@ uvicorn app.main:app --reload
 
 ## Machine Learning & Fine-Tuning
 
-**FR-MFG-001 — Prediksi Produksi:**
+**FR-MFG-001 - Prediksi Produksi:**
 - Model: LinearRegression (scikit-learn) dengan feature engineering
 - Fine-tuning: retrain otomatis setiap ada data produksi baru
 - Fitur: hari, tanggal, bulan, flag event liburan
 - Output: prediksi + confidence score + upper/lower bound
 - Confidence meningkat seiring data: 63% (7 titik) -> 91% (30 titik)
 
-**FR-COM-002 — Rekomendasi Harga Jual:**
-- Hitung biaya produksi dari resep × harga bahan baku (tabel stok)
+**FR-COM-002 - Rekomendasi Harga Jual:**
+- Hitung biaya produksi dari resep x harga bahan baku (tabel stok)
 - Output: harga minimal (margin target) + harga optimal (dibatasi harga pasar)
 
 **Chatbot:**
@@ -177,5 +177,5 @@ uvicorn app.main:app --reload
 
 ---
 
-*DapurPangan v0.1.0 — Fokus Smart Manufacturing + Smart Commerce* 
+*DapurPangan v0.1.0 - Fokus Smart Manufacturing + Smart Commerce* 
 *Dibuat untuk COMPFEST 18 AI Innovation Challenge*
