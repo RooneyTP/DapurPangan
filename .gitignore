@@ -26,4 +26,5 @@ pgdata/
 *.log
 docs/
 *.db
+*.db.bak-*
 *.sqlite3
