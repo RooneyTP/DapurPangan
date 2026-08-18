@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import Product, Stock, Customer, Recipe, Order, Production
+from app.models import Product, Stock, Customer, Recipe, Order, Production, Sale
 from datetime import date, timedelta
 import os
 
@@ -37,7 +37,10 @@ from app.routers import chat
 from app.routers import pricing
 from app.routers import prices
 from app.routers import recipe
+from app.routers import importer
+from app.routers import sales
 from app.services.predictor import predictor as prod_predictor
+from app.services.predictor import sales_predictor
 app.include_router(production.router)
 app.include_router(stock.router)
 app.include_router(orders.router)
@@ -45,6 +48,8 @@ app.include_router(chat.router)
 app.include_router(pricing.router)
 app.include_router(prices.router)
 app.include_router(recipe.router)
+app.include_router(importer.router)
+app.include_router(sales.router)
 
 
 @app.on_event("startup")
@@ -55,6 +60,8 @@ def startup():
     # SELALU seed predictor dari DB (fine-tune ulang tiap restart) —
     # jangan hanya saat DB kosong, karena restart server harus tetap punya model
     _seed_predictor()
+    _seed_sales_if_empty()
+    _seed_sales_predictor()
 
 
 def _seed_if_empty():
@@ -141,6 +148,69 @@ def _seed_predictor(db: SessionLocal = None):
                   f"(confidence {test['confidence_pct']}%)")
         else:
             print("📊 Predictor: no historical data yet")
+    finally:
+        if not db:
+            s.close()
+
+
+def _seed_sales_if_empty():
+    """Seed data penjualan B2C 14 hari terakhir kalau tabel sales masih kosong.
+
+    Tiap hari 1 record: produk pertama yang ada di DB, jumlah individu
+    bervariasi (80 + i*4 + (i%3)*2) supaya ada pola naik untuk training ML,
+    quantity_per_individual = 1. Kalau belum ada produk → tidak seed apa-apa.
+    """
+    db = SessionLocal()
+    try:
+        if db.query(Sale).count() > 0:
+            return
+        product = db.query(Product).first()
+        if not product:
+            return
+
+        today = date.today()
+        for i in range(14):  # hari ini mundur 13 hari → 14 hari data
+            d = today - timedelta(days=13 - i)
+            individuals = 80 + i * 4 + (i % 3) * 2
+            db.add(Sale(
+                product_id=product.id,
+                date=d,
+                individual_count=individuals,
+                quantity_per_individual=1,
+            ))
+        db.commit()
+        print("🛒 Sales B2C: seeded 14 hari data penjualan per individu")
+    finally:
+        db.close()
+
+
+def _seed_sales_predictor(db: SessionLocal = None):
+    """Seed sales_predictor dengan total unit per hari dari tabel Sale.
+
+    Dipanggil tiap startup (bukan hanya saat DB kosong) supaya restart
+    server tetap punya model yang fine-tuned dari data aktual.
+    """
+    from app.database import SessionLocal as DB
+    s = db or DB()
+    try:
+        history = s.query(Sale).order_by(Sale.date).all()
+        # Agregasi total unit per hari
+        per_day: dict = {}
+        for sale in history:
+            per_day[sale.date] = per_day.get(sale.date, 0) + \
+                sale.individual_count * sale.quantity_per_individual
+
+        sales_predictor.reset()
+        for d, total in sorted(per_day.items()):
+            sales_predictor.add_data_point(d, total)
+        n = len(per_day)
+        if n > 0:
+            test = sales_predictor.predict(date.today())
+            print(f"🛒 Sales Predictor: fine-tuned with {n} data points | "
+                  f"Prediksi unit besok: {test['prediction']} "
+                  f"(confidence {test['confidence_pct']}%)")
+        else:
+            print("🛒 Sales Predictor: no historical sales data yet")
     finally:
         if not db:
             s.close()

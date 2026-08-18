@@ -71,6 +71,21 @@ class OrderResponse(OrderCreate):
         from_attributes = True
 
 
+# --- Sale (Penjualan per Individu / B2C) ---
+class SaleCreate(BaseModel):
+    product_id: int
+    date: date
+    individual_count: int = Field(ge=1, description="Minimal 1 orang")
+    quantity_per_individual: int = Field(ge=1, description="Minimal 1 per orang")
+
+class SaleResponse(SaleCreate):
+    id: int
+    product_name: Optional[str] = None
+    total_quantity: int = 0
+    class Config:
+        from_attributes = True
+
+
 # --- Dashboard ---
 class DashboardResponse(BaseModel):
     greeting: str

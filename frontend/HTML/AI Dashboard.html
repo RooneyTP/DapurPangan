@@ -37,8 +37,18 @@
                 </div>
 
                 <div class="isi">
+                    <img src="../Image/Dashboard AI/Tag.svg" alt="Resep" style="height: 24px; width: 24px;">
+                    <a href="#resep">Resep</a>
+                </div>
+
+                <div class="isi">
                     <img src="../Image/Dashboard AI/Shopping cart.svg" alt="Pesanan & Pelanggan" style="height: 24px; width: 24px;">
                     <a href="#pesanan">Pesanan</a>
+                </div>
+
+                <div class="isi">
+                    <img src="../Image/Dashboard AI/Shopping cart.svg" alt="Penjualan" style="height: 24px; width: 24px;">
+                    <a href="#penjualan">Penjualan</a>
                 </div>
 
                 <div class="isi">
@@ -143,6 +153,10 @@
                                 </div>
                                 <p id="hasil-subtext" class="subtext">Berdasarkan margin target & analisis pasar</p>
                         </div>
+                        <div class="button-wrapper">
+                            <button id="btn-edit-param" class="btn">Edit Parameter</button>
+                            <button id="btn-reset-hasil" class="btn">Reset Hasil</button>
+                        </div>
                     </div>
                 </div>
 
@@ -158,6 +172,7 @@
                         <div class="page-header">
                             <h2 class="section-heading">Stok Bahan Baku</h2>
                             <button class="btn-tambah" id="btn-tambah-bahan" data-target="tambah-bahan">Tambah Data</button>
+                            <button class="btn" id="btn-import-bahan" style="margin-left:8px;">Import CSV</button>
                         </div>
 
                         <div class="page-main">
@@ -199,9 +214,22 @@
 
                             <div class="button-wrapper">
                                 <button id="btn-simpan-bahan" class="btn">Simpan</button>
+                                <button id="btn-batal-bahan" class="btn" hidden>Batal</button>
                             </div>
 
                         </div>
+                    </div>
+
+                    <div id="rec-stok-box" class="box" style="margin-bottom:12px;"></div>
+
+                    <div class="box" id="panel-import-bahan" hidden>
+                        <h2 class="section-heading">Import Data Stok (CSV)</h2>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+                            <button id="btn-template-bahan" class="btn">Download Template</button>
+                            <input type="file" id="file-import-bahan" accept=".csv" style="font-size:13px;">
+                            <button id="btn-upload-bahan" class="btn">Upload</button>
+                        </div>
+                        <div id="hasil-import-bahan" style="font-size:13px;"></div>
                     </div>
 
                     <div class="list-data" id="list-stok">
@@ -210,6 +238,78 @@
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            <div id="resep" class="page-content">
+                <div class="page-title">
+                    <h4>Resep</h4>
+                </div>
+
+                <div id="page-resep" class="page-body">
+                    <div id="page-frame-resep" class="page-frame">
+                        <div class="page-header">
+                            <h2 class="section-heading">Resep & Takaran Bahan</h2>
+                            <button class="btn-tambah" id="btn-tambah-resep" data-target="tambah-resep">Tambah Data</button>
+                        </div>
+
+                        <div class="page-main">
+                            <div class="box" id="tambah-resep" hidden>
+                                <h2 class="section-heading">Tambah Resep</h2>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Nama Produk</label>
+                                        <input type="text" id="input-produk-resep" class="input-data" placeholder="tempe">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Nama Bahan</label>
+                                        <input type="text" id="input-bahan-resep" class="input-data" placeholder="Kedelai">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Takaran per Unit (angka)</label>
+                                        <input type="number" id="input-takaran-resep" class="input-data" placeholder="0.1" step="any" min="0">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Satuan</label>
+                                        <select id="input-satuan-resep" class="input-data">
+                                            <option value="">Pilih Satuan</option>
+                                            <option value="g">Gram (g)</option>
+                                            <option value="kg">Kilogram (kg)</option>
+                                            <option value="liter">Liter</option>
+                                            <option value="lembar">Lembar</option>
+                                            <option value="pcs">Pcs</option>
+                                            <option value="bungkus">Bungkus</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="button-wrapper">
+                                    <button id="btn-simpan-resep" class="btn">Simpan</button>
+                                    <button id="btn-batal-resep" class="btn" hidden>Batal</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel Cek Kebutuhan -->
+                    <div class="box" id="box-cek-resep" style="margin-bottom:12px;">
+                        <h2 class="section-heading">Cek Kebutuhan Bahan untuk Pesanan</h2>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+                            <select id="pilih-produk-cek" class="input-data" style="max-width:200px;"></select>
+                            <input type="number" id="input-jumlah-cek" class="input-data" placeholder="Jumlah produk (mis. 100)" min="1" style="max-width:200px;">
+                            <button id="btn-cek-resep" class="btn">Cek Kebutuhan</button>
+                        </div>
+                        <div id="hasil-cek-resep" style="font-size:13px;"></div>
+                    </div>
+
+                    <div class="list-data" id="list-resep">
+                        <div class="box-list">
+
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -223,6 +323,7 @@
                         <div class="page-header">
                             <h2 class="section-heading">Pesanan</h2>
                             <button class="btn-tambah" id="btn-tambah-pesanan" data-target="tambah-pesanan">Tambah Data</button>
+                            <button class="btn" id="btn-import-pesanan" style="margin-left:8px;">Import CSV</button>
                         </div>
 
                         <div class="page-main">
@@ -259,14 +360,37 @@
                                         <label>Harga per Satuan (Rp)</label>
                                         <input type="number" id="input-harga-pesanan" class="input-data" placeholder="5500">
                                     </div>    
+                                    <div class="form-group">
+                                        <label>Status Pesanan</label>
+                                        <select id="input-status-pesanan" class="input-data">
+                                            <option value="pending">Menunggu</option>
+                                            <option value="delivered">Selesai</option>
+                                            <option value="cancelled">Dibatalkan</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div class="button-wrapper">
                                     <button id="btn-simpan-pesanan" class="btn">Simpan</button>
+                                    <button id="btn-batal-pesanan" class="btn" hidden>Batal</button>
                                 </div>
                             </div>
 
                         </div>
+                    </div>
+
+                    <div id="box-prediksi-besok" class="box" style="margin-bottom:12px;"></div>
+
+                    <div id="proj-pesanan-box" class="box" style="margin-bottom:12px;"></div>
+
+                    <div class="box" id="panel-import-pesanan" hidden>
+                        <h2 class="section-heading">Import Data Pesanan (CSV)</h2>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+                            <button id="btn-template-pesanan" class="btn">Download Template</button>
+                            <input type="file" id="file-import-pesanan" accept=".csv" style="font-size:13px;">
+                            <button id="btn-upload-pesanan" class="btn">Upload</button>
+                        </div>
+                        <div id="hasil-import-pesanan" style="font-size:13px;"></div>
                     </div>
 
                     <div class="list-data" id="list-pesanan">
@@ -275,6 +399,67 @@
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            <div id="penjualan" class="page-content">
+                <div class="page-title">
+                    <h4>Penjualan</h4>
+                </div>
+                
+                <div id="page-penjualan" class="page-body">
+                    <div id="page-frame-penjualan" class="page-frame">
+                        <div class="page-header">
+                            <h2 class="section-heading">Penjualan Per Individu</h2>
+                            <button class="btn-tambah" id="btn-tambah-penjualan" data-target="tambah-penjualan">Tambah Data</button>
+                            <button class="btn" id="btn-import-penjualan" style="margin-left:8px;">Import CSV</button>
+                        </div>
+                        <div class="page-main">
+                            <div id="filter-tabs-penjualan" class="filter-tabs">
+                                <button id="btn-semua-penjualan" class="btn-filter active">Semua</button>
+                                <button id="btn-hari-penjualan" class="btn-filter">Hari Ini</button>
+                            </div>
+                            <div class="box" id="tambah-penjualan" hidden>
+                                <h2 class="section-heading">Tambah Penjualan</h2>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Nama Produk</label>
+                                        <input type="text" id="input-produk-penjualan" class="input-data" placeholder="tempe">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Jumlah Individu</label>
+                                        <input type="number" id="input-individu-penjualan" class="input-data" placeholder="100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Beli per Individu</label>
+                                        <input type="number" id="input-perindividu-penjualan" class="input-data" placeholder="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Tanggal</label>
+                                        <input type="date" id="input-tanggal-penjualan" class="input-data">
+                                    </div>
+                                </div>
+                                <div class="button-wrapper">
+                                    <button id="btn-simpan-penjualan" class="btn">Simpan</button>
+                                    <button id="btn-batal-penjualan" class="btn" hidden>Batal</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="box" id="panel-import-penjualan" hidden>
+                        <h2 class="section-heading">Import Data Penjualan (CSV)</h2>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+                            <button id="btn-template-penjualan" class="btn">Download Template</button>
+                            <input type="file" id="file-import-penjualan" accept=".csv" style="font-size:13px;">
+                            <button id="btn-upload-penjualan" class="btn">Upload</button>
+                        </div>
+                        <div id="hasil-import-penjualan" style="font-size:13px;"></div>
+                    </div>
+                    <div class="list-data" id="list-penjualan">
+                        <div class="box-list">
+                                
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -288,6 +473,7 @@
                         <div class="page-header">
                             <h2 class="section-heading">Pelanggan</h2>
                             <button class="btn-tambah" id="btn-tambah-pelanggan" data-target="tambah-pelanggan">Tambah Data</button>
+                            <button class="btn" id="btn-import-pelanggan" style="margin-left:8px;">Import CSV</button>
                         </div>
 
                         <div class="page-main">
@@ -317,10 +503,21 @@
 
                                 <div class="button-wrapper">
                                     <button id="btn-simpan-pelanggan" class="btn">Simpan</button>
+                                    <button id="btn-batal-pelanggan" class="btn" hidden>Batal</button>
                                 </div>
 
                             </div>                    
                         </div>
+                    </div>
+
+                    <div class="box" id="panel-import-pelanggan" hidden>
+                        <h2 class="section-heading">Import Data Pelanggan (CSV)</h2>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+                            <button id="btn-template-pelanggan" class="btn">Download Template</button>
+                            <input type="file" id="file-import-pelanggan" accept=".csv" style="font-size:13px;">
+                            <button id="btn-upload-pelanggan" class="btn">Upload</button>
+                        </div>
+                        <div id="hasil-import-pelanggan" style="font-size:13px;"></div>
                     </div>
 
                     <div class="list-data" id="list-pelanggan">
@@ -335,6 +532,6 @@
         </div>
     </div>
 
-    <script src="../JS/script.js?v=4"></script>
+    <script src="../JS/script.js?v=9"></script>
 </body>
 </html>

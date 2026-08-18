@@ -107,3 +107,17 @@ class Order(Base):
 
     customer = relationship("Customer", back_populates="orders")
     product = relationship("Product")
+
+
+# --- Sale (Penjualan per Individu / B2C) ---
+class Sale(Base):
+    __tablename__ = "sales"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    date = Column(Date, nullable=False, default=date.today)
+    individual_count = Column(Integer, nullable=False)        # jumlah individu pembeli
+    quantity_per_individual = Column(Integer, nullable=False) # beli berapa per orang
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    product = relationship("Product")

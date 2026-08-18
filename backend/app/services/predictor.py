@@ -144,3 +144,8 @@ class ProductionPredictor:
 
 # Singleton — satu model untuk seluruh app
 predictor = ProductionPredictor()
+
+# Instance kedua — khusus prediksi penjualan B2C (Sale per individu).
+# Dipisah dari `predictor` karena data latihnya berbeda (unit terjual harian),
+# sehingga fine-tuning satu model tidak mencemari model yang lain.
+sales_predictor = ProductionPredictor()
