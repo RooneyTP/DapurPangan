@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models import Order, Customer, Product
@@ -89,7 +90,14 @@ def create_customer(data: CustomerBase, db: Session = Depends(get_db)):
     payload["name"] = name
     c = Customer(**payload)
     db.add(c)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Gagal menyimpan pelanggan (konflik database)")
+    except OverflowError:
+        db.rollback()
+        raise HTTPException(422, "Nilai angka terlalu besar")
     db.refresh(c)
     return c
 
@@ -106,7 +114,14 @@ def update_customer(customer_id: int, data: CustomerBase, db: Session = Depends(
     payload["name"] = name
     for field, value in payload.items():
         setattr(customer, field, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Gagal menyimpan pelanggan (konflik database)")
+    except OverflowError:
+        db.rollback()
+        raise HTTPException(422, "Nilai angka terlalu besar")
     db.refresh(customer)
     return customer
 
@@ -168,7 +183,7 @@ def today_orders(db: Session = Depends(get_db)):
     return result
 
 
-@router.post("/orders/", response_model=OrderResponse)
+@router.post("/orders/", response_model=OrderResponse, status_code=201)
 def create_order(data: OrderCreate, db: Session = Depends(get_db)):
     # Validasi FK — customer & product harus ada (hindari orphan data)
     customer = db.query(Customer).filter(Customer.id == data.customer_id).first()
@@ -180,7 +195,14 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
 
     order = Order(**data.model_dump())
     db.add(order)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Gagal menyimpan pesanan (konflik database)")
+    except OverflowError:
+        db.rollback()
+        raise HTTPException(422, "Nilai angka terlalu besar")
     db.refresh(order)
     return OrderResponse(
         id=order.id,
@@ -210,7 +232,14 @@ def update_order(order_id: int, data: OrderCreate, db: Session = Depends(get_db)
 
     for field, value in data.model_dump().items():
         setattr(order, field, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Gagal menyimpan pesanan (konflik database)")
+    except OverflowError:
+        db.rollback()
+        raise HTTPException(422, "Nilai angka terlalu besar")
     db.refresh(order)
     return OrderResponse(
         id=order.id,

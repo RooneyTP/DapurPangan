@@ -3,16 +3,9 @@ import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Default: lokal dev. Docker compose override via env.
-PW = 'zephyrus123'
-DB_USER = 'daparpangan'
-DB_HOST = 'localhost'
-DB_NAME = 'daparpangan'
-
-# Bangun URL dari variabel — password hanya dari PW
-_DEFAULT_URL = 'postgresql://' + DB_USER + ':' + PW + '@' + DB_HOST + ':5432/' + DB_NAME
-
-DATABASE_URL = os.getenv("DATABASE_URL", _DEFAULT_URL)
+# Default: SQLite lokal (fresh clone langsung bisa start tanpa env).
+# Docker compose / produksi set env DATABASE_URL dari container — tidak terpengaruh.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./daparpangan.db")
 
 engine = create_engine(DATABASE_URL)
 

@@ -1,17 +1,28 @@
 """Pydantic schemas for DapurPangan API."""
 from pydantic import BaseModel, Field
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 
 # --- Stock ---
 class StockBase(BaseModel):
     ingredient_name: str
-    quantity: float = Field(ge=0, description="Tidak boleh negatif")
+    quantity: float = Field(ge=0, allow_inf_nan=False, description="Tidak boleh negatif")
     unit: str = "kg"
-    price_per_unit: Optional[float] = None
-    min_warning: float = 5.0
-    min_critical: float = 1.0
+    price_per_unit: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
+    min_warning: float = Field(5.0, ge=0, allow_inf_nan=False)
+    min_critical: float = Field(1.0, ge=0, allow_inf_nan=False)
+
+
+class StockUpdate(BaseModel):
+    """PUT /api/stocks/{id}: field opsional None = pertahankan nilai lama."""
+    ingredient_name: str
+    quantity: float = Field(ge=0, allow_inf_nan=False)
+    unit: Optional[str] = None
+    price_per_unit: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
+    min_warning: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
+    min_critical: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
+
 
 class StockResponse(StockBase):
     id: int
@@ -24,7 +35,7 @@ class StockResponse(StockBase):
 # --- Pricing (FR-COM-002) ---
 class PriceBreakdown(BaseModel):
     ingredient: str
-    quantity_per_unit: float
+    quantity_per_unit: float = Field(gt=0, allow_inf_nan=False)
     unit: str
     price_per_unit: float
     cost_per_unit: float
@@ -60,8 +71,8 @@ class OrderCreate(BaseModel):
     customer_id: int
     product_id: int
     date: date
-    quantity: int = Field(ge=1, description="Minimal 1")
-    status: str = "pending"
+    quantity: int = Field(ge=1, le=1_000_000, description="Minimal 1")
+    status: Literal["pending", "delivered", "cancelled"] = "pending"
 
 class OrderResponse(OrderCreate):
     id: int
@@ -75,8 +86,8 @@ class OrderResponse(OrderCreate):
 class SaleCreate(BaseModel):
     product_id: int
     date: date
-    individual_count: int = Field(ge=1, description="Minimal 1 orang")
-    quantity_per_individual: int = Field(ge=1, description="Minimal 1 per orang")
+    individual_count: int = Field(ge=1, le=100_000, description="Minimal 1 orang")
+    quantity_per_individual: int = Field(ge=1, le=100, description="Minimal 1 per orang")
 
 class SaleResponse(SaleCreate):
     id: int
@@ -102,3 +113,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+class ChatHistoryItem(BaseModel):
+    role: str
+    content: str

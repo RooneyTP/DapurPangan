@@ -1,6 +1,10 @@
 """DapurPangan API — Main application."""
-from fastapi import FastAPI
+import json
+import math
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.database import engine, Base, SessionLocal
 from app.models import Product, Stock, Customer, Recipe, Order, Production, Sale
 from datetime import date, timedelta
@@ -15,9 +19,8 @@ app = FastAPI(
 
 # CORS — allow frontend from anywhere (PWA). Tanpa auth/cookie, jadi
 # allow_credentials=False (wildcard + credentials melanggar spec CORS)
-import json as _json
 try:
-    origins = _json.loads(os.getenv("CORS_ORIGINS", '["*"]'))
+    origins = json.loads(os.getenv("CORS_ORIGINS", '["*"]'))
 except (ValueError, TypeError):
     origins = ["*"]
 app.add_middleware(
@@ -27,6 +30,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _sanitize_nonfinite(obj):
+    """Ganti NaN/±Inf dengan string repr supaya JSONResponse tidak crash.
+
+    Starlette menolak serialize NaN/Infinity (allow_nan=False); kalau body
+    request memuat nan/inf, pydantic ikut menyertakan nilai itu di error
+    detail dan handler default melempar 500. Sanitasi di sini memastikan
+    validasi tetap membalas 422.
+    """
+    if isinstance(obj, float):
+        if math.isnan(obj):
+            return "NaN"
+        if math.isinf(obj):
+            return "Infinity" if obj > 0 else "-Infinity"
+        return obj
+    if isinstance(obj, dict):
+        return {str(k): _sanitize_nonfinite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize_nonfinite(v) for v in obj]
+    if isinstance(obj, (str, int, bool)) or obj is None:
+        return obj
+    return str(obj)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": _sanitize_nonfinite(exc.errors())},
+    )
 
 
 # --- Import routers ---
@@ -66,64 +100,68 @@ def startup():
 
 def _seed_if_empty():
     db = SessionLocal()
-    if db.query(Product).count() > 0:
+    try:
+        if db.query(Product).count() > 0:
+            return
+
+        # 1. Product
+        tempe = Product(name="Tempe", category="fermentasi", shelf_life_days=2, unit="bungkus", default_production=210)
+        db.add(tempe)
+        db.flush()
+
+        # 2. Recipes
+        db.add(Recipe(product_id=tempe.id, ingredient_name="Kedelai", quantity_per_unit=0.1, unit="kg"))
+        db.add(Recipe(product_id=tempe.id, ingredient_name="Ragi", quantity_per_unit=0.0005, unit="kg"))
+
+        # 3. Stocks (dengan harga per unit)
+        db.add(Stock(ingredient_name="Kedelai", quantity=50.0, unit="kg",
+                     price_per_unit=11500, min_warning=15.0, min_critical=5.0))
+        db.add(Stock(ingredient_name="Ragi", quantity=0.080, unit="kg",
+                     price_per_unit=62500, min_warning=0.2, min_critical=0.1))
+        db.add(Stock(ingredient_name="Plastik kemasan", quantity=220, unit="pcs",
+                     price_per_unit=150, min_warning=50, min_critical=20))
+
+        # 4. Customers
+        wa = Customer(name="Warung A", address="Jl. Mawar No. 12", phone="0812-xxxx-xxxx")
+        wb = Customer(name="Warung B", address="Jl. Melati No. 45", phone="0813-xxxx-xxxx")
+        pc = Customer(name="Pasar C", address="Pasar Induk Lamongan", phone="-")
+        kd = Customer(name="Kantin D", address="SMK N 1 Lamongan", phone="0814-xxxx-xxxx")
+        db.add_all([wa, wb, pc, kd])
+        db.flush()
+
+        # 5. Orders (14 hari terakhir — 7 hari lalu untuk baseline trend)
+        today = date.today()
+        # Baseline: 7 hari sebelumnya (hari -14 s/d -8)
+        for i in range(7, 14):
+            d = today - timedelta(days=i)
+            db.add(Order(customer_id=wa.id, product_id=tempe.id, date=d, quantity=30, status="delivered"))
+            db.add(Order(customer_id=wb.id, product_id=tempe.id, date=d, quantity=50, status="delivered"))
+            db.add(Order(customer_id=pc.id, product_id=tempe.id, date=d, quantity=100, status="delivered"))
+            db.add(Order(customer_id=kd.id, product_id=tempe.id, date=d, quantity=35, status="delivered"))  # dulu 35/hr
+
+        # 7 hari terakhir — Kantin D turun 30→20
+        for i in range(7):
+            d = today - timedelta(days=6 - i)
+            db.add(Order(customer_id=wa.id, product_id=tempe.id, date=d, quantity=30, status="delivered"))
+            db.add(Order(customer_id=wb.id, product_id=tempe.id, date=d, quantity=50, status="delivered"))
+            db.add(Order(customer_id=pc.id, product_id=tempe.id, date=d, quantity=100 + i * 5, status="delivered"))
+            qty_kd = max(20, 30 - i * 2)  # turun gradually 30→20
+            db.add(Order(customer_id=kd.id, product_id=tempe.id, date=d, quantity=qty_kd, status="delivered"))
+
+        # 6. Production history (14 hari — untuk training ML lebih baik)
+        for i in range(7, 14):
+            d = today - timedelta(days=i)
+            db.add(Production(product_id=tempe.id, date=d, quantity=200))
+        for i in range(7):
+            d = today - timedelta(days=6 - i)
+            db.add(Production(product_id=tempe.id, date=d, quantity=200 + i * 5))
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
         db.close()
-        return
-
-    # 1. Product
-    tempe = Product(name="Tempe", category="fermentasi", shelf_life_days=2, unit="bungkus", default_production=210)
-    db.add(tempe)
-    db.flush()
-
-    # 2. Recipes
-    db.add(Recipe(product_id=tempe.id, ingredient_name="Kedelai", quantity_per_unit=0.1, unit="kg"))
-    db.add(Recipe(product_id=tempe.id, ingredient_name="Ragi", quantity_per_unit=0.0005, unit="kg"))
-
-    # 3. Stocks (dengan harga per unit)
-    db.add(Stock(ingredient_name="Kedelai", quantity=50.0, unit="kg",
-                 price_per_unit=11500, min_warning=15.0, min_critical=5.0))
-    db.add(Stock(ingredient_name="Ragi", quantity=0.080, unit="kg",
-                 price_per_unit=62500, min_warning=0.2, min_critical=0.1))
-    db.add(Stock(ingredient_name="Plastik kemasan", quantity=220, unit="pcs",
-                 price_per_unit=150, min_warning=50, min_critical=20))
-
-    # 4. Customers
-    wa = Customer(name="Warung A", address="Jl. Mawar No. 12", phone="0812-xxxx-xxxx")
-    wb = Customer(name="Warung B", address="Jl. Melati No. 45", phone="0813-xxxx-xxxx")
-    pc = Customer(name="Pasar C", address="Pasar Induk Lamongan", phone="-")
-    kd = Customer(name="Kantin D", address="SMK N 1 Lamongan", phone="0814-xxxx-xxxx")
-    db.add_all([wa, wb, pc, kd])
-    db.flush()
-
-    # 5. Orders (14 hari terakhir — 7 hari lalu untuk baseline trend)
-    today = date.today()
-    # Baseline: 7 hari sebelumnya (hari -14 s/d -8)
-    for i in range(7, 14):
-        d = today - timedelta(days=i)
-        db.add(Order(customer_id=wa.id, product_id=tempe.id, date=d, quantity=30, status="delivered"))
-        db.add(Order(customer_id=wb.id, product_id=tempe.id, date=d, quantity=50, status="delivered"))
-        db.add(Order(customer_id=pc.id, product_id=tempe.id, date=d, quantity=100, status="delivered"))
-        db.add(Order(customer_id=kd.id, product_id=tempe.id, date=d, quantity=35, status="delivered"))  # dulu 35/hr
-
-    # 7 hari terakhir — Kantin D turun 30→20
-    for i in range(7):
-        d = today - timedelta(days=6 - i)
-        db.add(Order(customer_id=wa.id, product_id=tempe.id, date=d, quantity=30, status="delivered"))
-        db.add(Order(customer_id=wb.id, product_id=tempe.id, date=d, quantity=50, status="delivered"))
-        db.add(Order(customer_id=pc.id, product_id=tempe.id, date=d, quantity=100 + i * 5, status="delivered"))
-        qty_kd = max(20, 30 - i * 2)  # turun gradually 30→20
-        db.add(Order(customer_id=kd.id, product_id=tempe.id, date=d, quantity=qty_kd, status="delivered"))
-
-    # 6. Production history (14 hari — untuk training ML lebih baik)
-    for i in range(7, 14):
-        d = today - timedelta(days=i)
-        db.add(Production(product_id=tempe.id, date=d, quantity=200))
-    for i in range(7):
-        d = today - timedelta(days=6 - i)
-        db.add(Production(product_id=tempe.id, date=d, quantity=200 + i * 5))
-
-    db.commit()
-    db.close()
 
     # Seed predictor dengan data historis (fine-tuning awal)
     _seed_predictor()
@@ -131,8 +169,7 @@ def _seed_if_empty():
 
 def _seed_predictor(db: SessionLocal = None):
     """Seed predictor dengan data produksi historis untuk fine-tuning awal."""
-    from app.database import SessionLocal as DB
-    s = db or DB()
+    s = db or SessionLocal()
     try:
         history = s.query(Production).order_by(Production.date).all()
         # Reset dulu supaya restart server tidak double-count data lama
@@ -190,8 +227,7 @@ def _seed_sales_predictor(db: SessionLocal = None):
     Dipanggil tiap startup (bukan hanya saat DB kosong) supaya restart
     server tetap punya model yang fine-tuned dari data aktual.
     """
-    from app.database import SessionLocal as DB
-    s = db or DB()
+    s = db or SessionLocal()
     try:
         history = s.query(Sale).order_by(Sale.date).all()
         # Agregasi total unit per hari

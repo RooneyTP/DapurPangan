@@ -52,13 +52,15 @@ def get_dashboard(db: Session = Depends(get_db)):
     # Prediksi produksi pake ML (fine-tuned model)
     pred = predictor.predict(today)
 
-    # Stok alerts
+    # Stok alerts (guard nullable: min_critical/min_warning boleh NULL)
     stocks = db.query(Stock).all()
     stock_alerts = []
     for s in stocks:
-        if s.quantity < s.min_critical:
+        min_critical = s.min_critical
+        min_warning = s.min_warning
+        if min_critical is not None and s.quantity < min_critical:
             status = "🔴 KRITIS - BELI!"
-        elif s.quantity < s.min_warning:
+        elif min_warning is not None and s.quantity < min_warning:
             status = "🟡 WASPADA"
         else:
             status = "🟢 AMAN"
@@ -94,9 +96,14 @@ def get_dashboard(db: Session = Depends(get_db)):
 
     # Hanya tampilkan insight yang benar-benar dari data — tanpa hardcode
 
-    # Price alerts — dari service harga (Bapanas + fallback)
-    from app.services.prices import get_price_alerts
-    price_alerts = get_price_alerts()
+    # Price alerts — dari service harga (Bapanas + fallback).
+    # Jangan biarkan kegagalan service eksternal menjatuhkan dashboard.
+    try:
+        from app.services.prices import get_price_alerts
+        price_alerts = get_price_alerts()
+    except Exception as exc:
+        price_alerts = []
+        print(f"Price alerts gagal dimuat, fallback list kosong: {exc}")
 
     return DashboardResponse(
         greeting=f"🌅 Selamat pagi, Bu Sumi!",

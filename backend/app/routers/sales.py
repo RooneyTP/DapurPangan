@@ -8,6 +8,7 @@ pembeli (individual_count) dan berapa unit yang dibeli tiap orang
 from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models import Sale, Product
@@ -107,7 +108,7 @@ def today_sales(db: Session = Depends(get_db)):
     return result
 
 
-@router.post("/", response_model=SaleResponse)
+@router.post("/", response_model=SaleResponse, status_code=201)
 def create_sale(data: SaleCreate, db: Session = Depends(get_db)):
     """Catat penjualan B2C baru (validasi produk harus ada)."""
     product = db.query(Product).filter(Product.id == data.product_id).first()
@@ -116,7 +117,14 @@ def create_sale(data: SaleCreate, db: Session = Depends(get_db)):
 
     sale = Sale(**data.model_dump())
     db.add(sale)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Gagal menyimpan penjualan (konflik database)")
+    except OverflowError:
+        db.rollback()
+        raise HTTPException(422, "Nilai angka terlalu besar")
     db.refresh(sale)
     return _to_response(sale, product.name)
 
@@ -133,7 +141,14 @@ def update_sale(sale_id: int, data: SaleCreate, db: Session = Depends(get_db)):
 
     for field, value in data.model_dump().items():
         setattr(sale, field, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Gagal menyimpan penjualan (konflik database)")
+    except OverflowError:
+        db.rollback()
+        raise HTTPException(422, "Nilai angka terlalu besar")
     db.refresh(sale)
     return _to_response(sale, product.name)
 

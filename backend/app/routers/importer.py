@@ -41,13 +41,21 @@ def _check_header(fieldnames, required: list[str]) -> None:
         )
 
 
-def _parse_float_default(value, default: float) -> float:
-    """Parse float; kalau kosong/gagal → default (untuk kolom opsional)."""
+def _parse_optional_float(value):
+    """Parse float opsional: kosong -> (None, None), tidak valid -> (None, error).
+
+    Non-finite (NaN/Infinity) ditolak supaya tidak pernah masuk DB.
+    """
+    s = (value or "").strip()
+    if not s:
+        return None, None
     try:
-        s = (value or "").strip()
-        return float(s) if s else default
+        f = float(s)
     except ValueError:
-        return default
+        return None, "harus angka"
+    if not math.isfinite(f):
+        return None, "harus angka terbatas (bukan NaN/Infinity)"
+    return f, None
 
 
 def _finish(kind: str, imported: int, errors: list, db: Session) -> dict:
@@ -104,13 +112,18 @@ def import_stocks(payload: bytes = Body(...), db: Session = Depends(get_db)):
             continue
 
         unit = (raw.get("unit") or "").strip() or "kg"
-        price_raw = (raw.get("price_per_unit") or "").strip()
-        try:
-            price = float(price_raw) if price_raw else None
-        except ValueError:
-            price = None  # harga tidak valid → simpan tanpa harga
-        min_warning = _parse_float_default(raw.get("min_warning"), 5.0)
-        min_critical = _parse_float_default(raw.get("min_critical"), 1.0)
+        price, price_err = _parse_optional_float(raw.get("price_per_unit"))
+        if price_err:
+            errors.append({"row": idx, "reason": "price_per_unit " + price_err})
+            continue
+        min_warning, warn_err = _parse_optional_float(raw.get("min_warning"))
+        if warn_err:
+            errors.append({"row": idx, "reason": "min_warning " + warn_err})
+            continue
+        min_critical, crit_err = _parse_optional_float(raw.get("min_critical"))
+        if crit_err:
+            errors.append({"row": idx, "reason": "min_critical " + crit_err})
+            continue
 
         try:
             with db.begin_nested():
@@ -122,8 +135,14 @@ def import_stocks(payload: bytes = Body(...), db: Session = Depends(get_db)):
                     min_warning=min_warning,
                     min_critical=min_critical,
                 ))
+                # flush eksplisit: IntegrityError ketangkap per baris (savepoint),
+                # bukan menunggu commit akhir yang menggagalkan seluruh batch
+                db.flush()
         except IntegrityError:
             errors.append({"row": idx, "reason": f"Stok '{name}' sudah ada"})
+            continue
+        except OverflowError:
+            errors.append({"row": idx, "reason": "Angka terlalu besar"})
             continue
         imported_names.add(key)
         imported += 1
@@ -135,19 +154,29 @@ def import_stocks(payload: bytes = Body(...), db: Session = Depends(get_db)):
 def import_customers(payload: bytes = Body(...), db: Session = Depends(get_db)):
     """Import pelanggan dari CSV. Header wajib: name.
 
-    Opsional: address, phone, notes. Duplikat nama TIDAK dicek
-    (Customer tidak punya unique constraint) — hanya name kosong yang ditolak.
+    Opsional: address, phone, notes. Nama duplikat (case-insensitive,
+    terhadap DB & batch ini) dilewati + dilaporkan, bukan insert baru.
     """
     reader = csv.DictReader(io.StringIO(_decode(payload)))
     _check_header(reader.fieldnames, ["name"])
 
     imported = 0
     errors = []
+    imported_names: set[str] = set()  # nama pelanggan yang sudah diimpor di batch ini
 
     for idx, raw in enumerate(reader, start=2):
         name = (raw.get("name") or "").strip()
         if not name:
             errors.append({"row": idx, "reason": "Nama pelanggan wajib diisi"})
+            continue
+
+        # Dedup case-insensitive: sudah ada di DB atau di batch ini? skip
+        key = name.lower()
+        exists = db.query(Customer).filter(
+            func.lower(Customer.name) == key
+        ).first()
+        if exists or key in imported_names:
+            errors.append({"row": idx, "reason": f"Pelanggan '{name}' sudah ada"})
             continue
 
         try:
@@ -158,9 +187,14 @@ def import_customers(payload: bytes = Body(...), db: Session = Depends(get_db)):
                     phone=(raw.get("phone") or "").strip() or None,
                     notes=(raw.get("notes") or "").strip() or None,
                 ))
+                db.flush()
         except IntegrityError:
             errors.append({"row": idx, "reason": "Gagal menyimpan pelanggan (konflik database)"})
             continue
+        except OverflowError:
+            errors.append({"row": idx, "reason": "Angka terlalu besar"})
+            continue
+        imported_names.add(key)
         imported += 1
 
     return _finish("customers", imported, errors, db)
@@ -178,6 +212,7 @@ def import_orders(payload: bytes = Body(...), db: Session = Depends(get_db)):
 
     imported = 0
     errors = []
+    imported_orders: set = set()  # kombinasi (customer, product, date, qty) batch ini
 
     for idx, raw in enumerate(reader, start=2):
         customer_name = (raw.get("customer_name") or "").strip()
@@ -216,10 +251,28 @@ def import_orders(payload: bytes = Body(...), db: Session = Depends(get_db)):
         if qty < 1:
             errors.append({"row": idx, "reason": "quantity harus >= 1"})
             continue
+        if qty > 1_000_000:
+            errors.append({"row": idx, "reason": "quantity terlalu besar (maks 1000000)"})
+            continue
 
         status = (raw.get("status") or "").strip().lower() or "pending"
         if status not in VALID_ORDER_STATUSES:
             status = "pending"
+
+        # Dedup: kombinasi (customer, product, date, quantity) sudah ada? skip
+        combo = (customer.id, product.id, order_date, qty)
+        exists_order = db.query(Order).filter(
+            Order.customer_id == customer.id,
+            Order.product_id == product.id,
+            Order.date == order_date,
+            Order.quantity == qty,
+        ).first()
+        if exists_order or combo in imported_orders:
+            errors.append({
+                "row": idx,
+                "reason": "Pesanan duplikat (customer, product, date, quantity yang sama sudah ada)",
+            })
+            continue
 
         try:
             with db.begin_nested():
@@ -230,9 +283,14 @@ def import_orders(payload: bytes = Body(...), db: Session = Depends(get_db)):
                     quantity=qty,
                     status=status,
                 ))
+                db.flush()
         except IntegrityError:
             errors.append({"row": idx, "reason": "Gagal menyimpan pesanan (konflik database)"})
             continue
+        except OverflowError:
+            errors.append({"row": idx, "reason": "Angka terlalu besar"})
+            continue
+        imported_orders.add(combo)
         imported += 1
 
     return _finish("orders", imported, errors, db)
@@ -285,6 +343,9 @@ def import_sales(payload: bytes = Body(...), db: Session = Depends(get_db)):
         if individuals < 1:
             errors.append({"row": idx, "reason": "individual_count harus >= 1"})
             continue
+        if individuals > 100_000:
+            errors.append({"row": idx, "reason": "individual_count terlalu besar (maks 100000)"})
+            continue
 
         try:
             qty_per = int((raw.get("quantity_per_individual") or "").strip())
@@ -293,6 +354,9 @@ def import_sales(payload: bytes = Body(...), db: Session = Depends(get_db)):
             continue
         if qty_per < 1:
             errors.append({"row": idx, "reason": "quantity_per_individual harus >= 1"})
+            continue
+        if qty_per > 100:
+            errors.append({"row": idx, "reason": "quantity_per_individual terlalu besar (maks 100)"})
             continue
 
         try:
@@ -303,8 +367,12 @@ def import_sales(payload: bytes = Body(...), db: Session = Depends(get_db)):
                     individual_count=individuals,
                     quantity_per_individual=qty_per,
                 ))
+                db.flush()
         except IntegrityError:
             errors.append({"row": idx, "reason": "Gagal menyimpan penjualan (konflik database)"})
+            continue
+        except OverflowError:
+            errors.append({"row": idx, "reason": "Angka terlalu besar"})
             continue
         imported += 1
 

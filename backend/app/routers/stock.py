@@ -8,7 +8,7 @@ from sqlalchemy import func
 
 from app.database import get_db
 from app.models import Product, Recipe, Stock
-from app.schemas import StockBase, StockResponse
+from app.schemas import StockBase, StockUpdate, StockResponse
 from app.services.predictor import predictor
 
 router = APIRouter(prefix="/api/stocks", tags=["Stock"])
@@ -96,9 +96,11 @@ def list_stocks(db: Session = Depends(get_db)):
     stocks = db.query(Stock).all()
     result = []
     for s in stocks:
-        if s.quantity < s.min_critical:
+        min_critical = s.min_critical
+        min_warning = s.min_warning
+        if min_critical is not None and s.quantity < min_critical:
             status = "kritis"
-        elif s.quantity < s.min_warning:
+        elif min_warning is not None and s.quantity < min_warning:
             status = "waspada"
         else:
             status = "aman"
@@ -131,6 +133,11 @@ def create_stock(data: StockBase, db: Session = Depends(get_db)):
 
     payload = data.model_dump()
     payload["ingredient_name"] = ingredient_name
+    # Guard tambahan: tolak non-finite sebelum commit (defense in depth)
+    for field in ("quantity", "price_per_unit", "min_warning", "min_critical"):
+        val = payload.get(field)
+        if val is not None and not math.isfinite(val):
+            raise HTTPException(422, f"{field} harus angka terbatas (bukan NaN/Infinity)")
     stock = Stock(**payload)
     db.add(stock)
     try:
@@ -140,9 +147,11 @@ def create_stock(data: StockBase, db: Session = Depends(get_db)):
         raise HTTPException(409, f"Stok '{ingredient_name}' sudah ada")
     db.refresh(stock)
     status = "aman"
-    if stock.quantity < stock.min_critical:
+    min_critical = stock.min_critical
+    min_warning = stock.min_warning
+    if min_critical is not None and stock.quantity < min_critical:
         status = "kritis"
-    elif stock.quantity < stock.min_warning:
+    elif min_warning is not None and stock.quantity < min_warning:
         status = "waspada"
     return StockResponse(id=stock.id, **payload, status=status)
 
@@ -155,14 +164,17 @@ def adjust_stock(stock_id: int, delta: float, db: Session = Depends(get_db)):
     stock = db.query(Stock).filter(Stock.id == stock_id).first()
     if not stock:
         raise HTTPException(404, "Stok tidak ditemukan")
-    stock.quantity = max(0, stock.quantity + delta)
+    new_qty = stock.quantity + delta
+    if not math.isfinite(new_qty):
+        raise HTTPException(422, "Hasil penyesuaian meluap (bukan angka terbatas)")
+    stock.quantity = max(0, new_qty)
     db.commit()
     db.refresh(stock)
     return {"message": f"Stok {stock.ingredient_name} = {stock.quantity} {stock.unit}"}
 
 
 @router.put("/{stock_id}", response_model=StockResponse)
-def update_stock(stock_id: int, data: StockBase, db: Session = Depends(get_db)):
+def update_stock(stock_id: int, data: StockUpdate, db: Session = Depends(get_db)):
     stock = db.query(Stock).filter(Stock.id == stock_id).first()
     if not stock:
         raise HTTPException(404, "Stok tidak ditemukan")
@@ -179,10 +191,23 @@ def update_stock(stock_id: int, data: StockBase, db: Session = Depends(get_db)):
     if exists:
         raise HTTPException(409, f"Stok '{ingredient_name}' sudah ada")
 
-    payload = data.model_dump()
-    payload["ingredient_name"] = ingredient_name
-    for field, value in payload.items():
-        setattr(stock, field, value)
+    # Guard tambahan: tolak non-finite sebelum commit (defense in depth)
+    for field in ("quantity", "price_per_unit", "min_warning", "min_critical"):
+        val = getattr(data, field)
+        if val is not None and not math.isfinite(val):
+            raise HTTPException(422, f"{field} harus angka terbatas (bukan NaN/Infinity)")
+
+    # Partial update: field None = pertahankan nilai lama (kontrak frontend)
+    stock.ingredient_name = ingredient_name
+    stock.quantity = data.quantity
+    if data.unit is not None:
+        stock.unit = data.unit
+    if data.price_per_unit is not None:
+        stock.price_per_unit = data.price_per_unit
+    if data.min_warning is not None:
+        stock.min_warning = data.min_warning
+    if data.min_critical is not None:
+        stock.min_critical = data.min_critical
     try:
         db.commit()
     except IntegrityError:
@@ -190,10 +215,12 @@ def update_stock(stock_id: int, data: StockBase, db: Session = Depends(get_db)):
         raise HTTPException(409, f"Stok '{ingredient_name}' sudah ada")
     db.refresh(stock)
 
-    # Hitung status seperti di list_stocks
-    if stock.quantity < stock.min_critical:
+    # Hitung status seperti di list_stocks (guard nullable)
+    min_critical = stock.min_critical
+    min_warning = stock.min_warning
+    if min_critical is not None and stock.quantity < min_critical:
         status = "kritis"
-    elif stock.quantity < stock.min_warning:
+    elif min_warning is not None and stock.quantity < min_warning:
         status = "waspada"
     else:
         status = "aman"
