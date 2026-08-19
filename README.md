@@ -161,7 +161,7 @@ python -m uvicorn app.main:app --reload
 3. **Rekomendasi beli stok** - `GET /api/stocks/recommendations` -> Execute -> dapat saran "Beli X kg" per bahan baku.
 4. **Rekomendasi harga** - `GET /api/pricing/recommendation` -> Execute -> dapat harga jual minimal & optimal.
 5. **Chat AI + AI data entry** - buka `frontend/HTML/AI Dashboard.html` -> tab **AI Chat** -> tanya *"berapa produksi besok?"* atau ketik perintah seperti *"stok kedelai 50 kg"*.
-6. **Import CSV** - tab **Import** di dashboard -> upload file CSV sesuai template -> lihat laporan per baris (N berhasil, M gagal).
+6. **Import CSV** - tombol **Import CSV** di tiap section -> upload file CSV sesuai template -> lihat laporan per baris (N berhasil, M gagal).
 7. **Edit & hapus data** - di dashboard HTML: tab **Stok Bahan** / **Pesanan** / **Penjualan** / **Pelanggan** -> Edit atau Hapus; tambah data baru lewat tombol Tambah Data.
 8. **Reset data** kalau sudah berantakan: lihat tabel Troubleshooting di atas.
 
@@ -193,6 +193,7 @@ python -m uvicorn app.main:app --reload
 | GET | `/api/prices/` | Harga komoditas |
 | GET | `/api/prices/alerts` | Peringatan harga (naik/turun >= 10%) |
 | POST | `/api/chat` | Tanya DapurPangan + AI data entry (LLM + fallback) |
+| GET | `/api/chat/history` | Riwayat percakapan chat (memori percakapan) |
 | POST | `/api/import/stocks` | Import CSV stok (laporan per baris) |
 | POST | `/api/import/customers` | Import CSV pelanggan (laporan per baris) |
 | POST | `/api/import/orders` | Import CSV pesanan (laporan per baris) |
@@ -203,7 +204,9 @@ python -m uvicorn app.main:app --reload
 
 **FR-MFG-001 - Prediksi Produksi:**
 - Model: LinearRegression (scikit-learn) dengan feature engineering
-- Fine-tuning: retrain otomatis setiap ada data produksi baru
+- Fine-tuning: model produksi di-train ulang saat server start dari riwayat di
+  database; model penjualan B2C di-retrain setiap pemanggilan prediksi; tidak
+  ada jalur input data produksi baru selain seed/riwayat di database
 - Fitur: hari, tanggal, bulan, flag event liburan
 - Output: prediksi + confidence score + upper/lower bound
 - Confidence meningkat seiring data: 63% (7 titik) -> 91% (30 titik)
@@ -221,6 +224,9 @@ python -m uvicorn app.main:app --reload
 - Output: harga minimal (margin target) + harga optimal (dibatasi harga pasar)
 
 **FR-COM-003 - Prediksi Penjualan B2C:**
+- Model: LinearRegression (scikit-learn, instance `sales_predictor`) - SUDAH fine-tuned
+  otomatis dari riwayat penjualan B2C (retrain dari database setiap kali
+  diprediksi; live: 35 data points, confidence 92%)
 - Prediksi produksi besok dari data penjualan: jumlah pembeli & unit
 - Notifikasi H-1 di section Pesanan
 
@@ -228,6 +234,14 @@ python -m uvicorn app.main:app --reload
 - OpenCodeZen API (OpenAI-compatible, model `deepseek-v4-flash-free`) + rule-based fallback
 - Dual mode: coba LLM dulu, fallback ke response lokal jika offline/rate-limit
 - AI data entry: perintah bahasa Indonesia diparse lalu langsung disimpan ke database
+- KONTEKS DATABASE (RAG sederhana): sebelum LLM menjawab, sistem membaca data live
+  dari database (stok terkini, prediksi produksi, prediksi penjualan, rekomendasi
+  harga, top pelanggan) lalu menyisipkannya ke prompt - jawaban selalu berbasis
+  data aktual, bukan angka basi
+- MEMORI CHAT: riwayat percakapan disimpan di database dan dipakai sebagai konteks
+  jawaban berikutnya (percakapan berlanjut, tidak dimulai dari nol setiap pesan)
+- Catatan jujur: chatbot TIDAK di-fine-tune karena memakai LLM pihak ketiga via API;
+  model yang di-fine-tune adalah 2 predictor prediksi (FR-MFG-001 & FR-COM-003)
 
 ## Tech Stack
 

@@ -28,6 +28,9 @@ body{
 
 .page-content{
     width: 100%;
+    /* Default tersembunyi: hilangkan flash semua section sebelum JS menampilkan
+       section aktif lewat switchPage() */
+    display: none;
 }
 
 .page-title{

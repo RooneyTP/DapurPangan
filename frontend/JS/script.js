@@ -1,4 +1,4 @@
-// DapurPangan — Frontend integration with FastAPI backend
+// DapurPangan - Frontend integration with FastAPI backend
 // API base otomatis: pakai host yang sama dengan halaman (kalau frontend
 // disajikan dari host lain), fallback ke localhost:8000 untuk dev.
 const API = (() => {
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Loading indicator
         const loadingHTML = `
             <div class="message ai-message" id="chat-loading">
-                <div class="bubble-ai">⏳ Sedang memproses...</div>
+                <div class="bubble-ai">Sedang memproses...</div>
             </div>
         `;
         chatMessages.insertAdjacentHTML('beforeend', loadingHTML);
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('chat-loading')?.remove();
             const aiHTML = `
                 <div class="message ai-message">
-                    <div class="bubble-ai">⚠️ Gagal terhubung ke server. Pastikan backend berjalan (docker compose up).</div>
+                    <div class="bubble-ai"> Gagal terhubung ke server. Pastikan backend berjalan (docker compose up).</div>
                 </div>
             `;
             chatMessages.insertAdjacentHTML('beforeend', aiHTML);
@@ -178,6 +178,37 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
+    }
+
+    // Muat riwayat chat dari backend saat halaman dibuka (memori percakapan setelah refresh)
+    async function loadChatHistory(){
+        if (!chatMessages) return;
+        let msgs;
+        try {
+            msgs = await apiGet('/chat/history');
+        } catch(e) {
+            return; // endpoint error/404 -> diam, biarkan greeting statis
+        }
+        if (!Array.isArray(msgs) || msgs.length === 0) return; // kosong -> biarkan greeting statis
+        chatMessages.innerHTML = '';
+        msgs.forEach(m => {
+            if (m.role === 'user') {
+                chatMessages.insertAdjacentHTML('beforeend', `
+                    <div class="message user-message" style="display: flex; justify-content: flex-end;">
+                        <div style="background-color: #E07C25; color: #FFFFFF; padding: 14px 20px; border-radius: 18px 18px 2px 18px; max-width: 60%; font-size: 14px; line-height: 1.5;">
+                            ${esc(m.content)}
+                        </div>
+                    </div>
+                `);
+            } else if (m.role === 'assistant') {
+                chatMessages.insertAdjacentHTML('beforeend', `
+                    <div class="message ai-message">
+                        <div class="bubble-ai">${esc(m.content)}</div>
+                    </div>
+                `);
+            }
+        });
+        scrollToBottom();
     }
 
     // ===================== REKOMENDASI HARGA =====================
@@ -201,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         lastParams = { nama: nama, margin: margin, min: min, max: max };
-        if(hasilHarga) hasilHarga.textContent = '⏳ Menghitung...';
+        if(hasilHarga) hasilHarga.textContent = 'Menghitung...';
         if(hasilSubtext) hasilSubtext.textContent = 'Menghubungi AI DapurPangan...';
 
         try {
@@ -212,8 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const products = await apiGet('/products');
                 const found = products.find(p => p.name.toLowerCase() === namaInput.toLowerCase());
                 if(!found){
-                    if(hasilHarga) hasilHarga.textContent = '—';
-                    if(hasilSubtext) hasilSubtext.textContent = `⚠️ Produk "${namaInput}" tidak ditemukan. Produk tersedia: ${products.map(p => p.name).join(', ')}.`;
+                    if(hasilHarga) hasilHarga.textContent = '-';
+                    if(hasilSubtext) hasilSubtext.textContent = ` Produk "${namaInput}" tidak ditemukan. Produk tersedia: ${products.map(p => p.name).join(', ')}.`;
                     return;
                 }
                 productId = found.id;
@@ -227,8 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     `Rekomendasi AI untuk ${data.product_name}: ${rupiah(data.price_optimal)} (kompetitif di pasar ${rupiah(data.market_price_low)}-${rupiah(data.market_price_high)}).`;
             }
         } catch(e) {
-            if(hasilHarga) hasilHarga.textContent = '—';
-            if(hasilSubtext) hasilSubtext.textContent = `⚠️ ${e.message}. Pastikan backend berjalan.`;
+            if(hasilHarga) hasilHarga.textContent = '-';
+            if(hasilSubtext) hasilSubtext.textContent = ` ${e.message}. Pastikan backend berjalan.`;
         }
     });
 
@@ -268,16 +299,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? stocksCache.filter(s => s.status !== 'aman')  // yang perlu perhatian hari ini
                 : stocksCache;
             const statusBadge = (s) => {
-                if(s.status === 'kritis') return '<span style="color:#E74C3C;">🔴 KRITIS</span>';
-                if(s.status === 'waspada') return '<span style="color:#F39C12;">🟡 WASPADA</span>';
-                return '<span style="color:#27AE60;">🟢 AMAN</span>';
+                if(s.status === 'kritis') return '<span style="color:#E74C3C;">KRITIS</span>';
+                if(s.status === 'waspada') return '<span style="color:#F39C12;">WASPADA</span>';
+                return '<span style="color:#27AE60;">AMAN</span>';
             };
             listEl.innerHTML = stocks.map(s => `
                 <div class="box-list">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
                         <div>
                             <strong>${esc(s.ingredient_name)}</strong>
-                            <div style="font-size:13px;color:#888;">${esc(s.quantity)} ${esc(s.unit)} • ${rupiah(s.price_per_unit)}/${esc(s.unit)}</div>
+                            <div style="font-size:13px;color:#888;">${esc(s.quantity)} ${esc(s.unit)} - ${rupiah(s.price_per_unit)}/${esc(s.unit)}</div>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             ${statusBadge(s)}
@@ -288,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `).join('') || '<div class="box-list">Tidak ada data untuk filter ini.</div>';
         } catch(e) {
-            listEl.innerHTML = `<div class="box-list">⚠️ ${esc(e.message)}</div>`;
+            listEl.innerHTML = `<div class="box-list"> ${esc(e.message)}</div>`;
         }
     }
 
@@ -314,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="box-list" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
                         <div>
                             <strong>${esc(it.ingredient_name)}</strong>
-                            <div style="font-size:13px;color:#888;">Stok ${fmtNum(it.stock)} ${esc(it.unit)} • Kebutuhan ${fmtNum(it.needed)} ${esc(it.unit)}</div>
+                            <div style="font-size:13px;color:#888;">Stok ${fmtNum(it.stock)} ${esc(it.unit)} - Kebutuhan ${fmtNum(it.needed)} ${esc(it.unit)}</div>
                         </div>
                         ${aksi(it)}
                     </div>
@@ -342,9 +373,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         ingredient_name: nama,
                         quantity: jumlah,
                         unit: satuan,
-                        price_per_unit: harga || null
+                        price_per_unit: harga || null,
+                        min_warning: editingStockMinWarning,
+                        min_critical: editingStockMinCritical
                     });
-                    alert(`✅ Stok ${nama} berhasil diperbarui!`);
+                    alert(`Stok ${nama} berhasil diperbarui!`);
                 } else {
                     await apiPost('/stocks/', {
                         ingredient_name: nama,
@@ -352,19 +385,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         unit: satuan,
                         price_per_unit: harga || null
                     });
-                    alert(`✅ Stok ${nama} berhasil ditambahkan!`);
+                    alert(`Stok ${nama} berhasil ditambahkan!`);
                 }
                 resetStockForm();
                 loadStocks();
                 loadStockRec();
             } catch(e) {
-                alert(`❌ ${e.message}`);
+                alert(`${e.message}`);
             }
         });
     }
 
     // ---- Edit / Hapus stok ----
     let editingStockId = null;
+    // Ambang stok baris yang sedang diedit: WAJIB dikirim ulang saat PUT karena
+    // backend (batch 1) membuat min_warning/min_critical optional + partial update;
+    // kalau tidak dikirim, nilainya bisa ikut ter-update/hilang.
+    let editingStockMinWarning = null;
+    let editingStockMinCritical = null;
     const formBahan = document.getElementById('tambah-bahan');
     const judulBahan = document.querySelector('#tambah-bahan .section-heading');
     const btnTambahBahan = document.getElementById('btn-tambah-bahan');
@@ -372,6 +410,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetStockForm(){
         editingStockId = null;
+        editingStockMinWarning = null;
+        editingStockMinCritical = null;
         if(judulBahan) judulBahan.textContent = 'Tambah Bahan Baku';
         if(btnSimpanBahan) btnSimpanBahan.textContent = 'Simpan';
         const inpNama = document.getElementById('input-nama-bahan');
@@ -400,12 +440,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         stock = (await apiGet('/stocks/')).find(s => String(s.id) === String(id));
                     } catch(err) {
-                        alert(`❌ ${err.message}`);
+                        alert(`${err.message}`);
                         return;
                     }
                 }
                 if(!stock) return;
                 editingStockId = stock.id;
+                editingStockMinWarning = (stock.min_warning != null) ? stock.min_warning : null;
+                editingStockMinCritical = (stock.min_critical != null) ? stock.min_critical : null;
                 const inpNama = document.getElementById('input-nama-bahan');
                 const inpJumlah = document.getElementById('input-jumlah-bahan');
                 const inpSatuan = document.getElementById('input-satuan-bahan');
@@ -428,11 +470,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!confirm(`Hapus stok "${namaStok}"?`)) return;
                 try {
                     await apiDelete('/stocks/' + id);
-                    alert('✅ Stok berhasil dihapus!');
+                    alert('Stok berhasil dihapus!');
                     loadStocks();
                     loadStockRec();
                 } catch(err) {
-                    alert(`❌ ${err.message}`);
+                    alert(`${err.message}`);
                 }
             }
         });
@@ -457,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
                         <div>
                             <strong>${esc(o.customer_name)}</strong>
-                            <div style="font-size:13px;color:#888;">${esc(o.product_name)} • ${esc(o.quantity)} unit • ${esc(o.status)}</div>
+                            <div style="font-size:13px;color:#888;">${esc(o.product_name)} - ${esc(o.quantity)} unit - ${esc(o.status)}</div>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <span style="font-size:12px;">${esc(o.date)}</span>
@@ -468,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `).join('') || '<div class="box-list">Belum ada pesanan.</div>';
         } catch(e) {
-            listEl.innerHTML = `<div class="box-list">⚠️ ${esc(e.message)}</div>`;
+            listEl.innerHTML = `<div class="box-list"> ${esc(e.message)}</div>`;
         }
     }
 
@@ -540,17 +582,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 if(editingOrderId){
                     await apiPut('/orders/' + editingOrderId, payload);
-                    alert(`✅ Pesanan ${namaPlg} (${jumlah} ${namaProduk}) diperbarui!`);
+                    alert(`Pesanan ${namaPlg} (${jumlah} ${namaProduk}) diperbarui!`);
                 } else {
                     await apiPost('/orders/', payload);
-                    alert(`✅ Pesanan ${namaPlg} (${jumlah} ${namaProduk}) disimpan!`);
+                    alert(`Pesanan ${namaPlg} (${jumlah} ${namaProduk}) disimpan!`);
                 }
                 resetOrderForm();
                 loadOrders(lastOrdersFilter || 'hari');
                 loadOrderProj();
                 loadSalesPrediction();
             } catch(e) {
-                alert(`❌ ${e.message}`);
+                alert(`${e.message}`);
             }
         });
     }
@@ -592,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const path = (lastOrdersFilter === 'hari') ? '/orders/today' : '/orders/';
                         order = (await apiGet(path)).find(o => String(o.id) === String(id));
                     } catch(err) {
-                        alert(`❌ ${err.message}`);
+                        alert(`${err.message}`);
                         return;
                     }
                 }
@@ -622,12 +664,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!confirm(`Hapus pesanan "${namaOrder}"?`)) return;
                 try {
                     await apiDelete('/orders/' + id);
-                    alert('✅ Pesanan berhasil dihapus!');
+                    alert('Pesanan berhasil dihapus!');
                     loadOrders(lastOrdersFilter || 'hari');
                     loadOrderProj();
                     loadSalesPrediction();
                 } catch(err) {
-                    alert(`❌ ${err.message}`);
+                    alert(`${err.message}`);
                 }
             }
         });
@@ -686,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="box-list">
                         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
                             <div>
-                                <strong>${esc(namaProduk)} — ${esc(r.ingredient_name)}</strong>
+                                <strong>${esc(namaProduk)} - ${esc(r.ingredient_name)}</strong>
                                 <div style="font-size:13px;color:#888;">${fmtNum(r.quantity_per_unit)} ${esc(r.unit)} per unit produk</div>
                             </div>
                             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -699,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('') || '<div class="box-list">Belum ada resep. Tambahkan resep produk dulu.</div>';
             fillCekProdukSelect();
         } catch(e) {
-            listEl.innerHTML = `<div class="box-list">⚠️ ${esc(e.message)}</div>`;
+            listEl.innerHTML = `<div class="box-list"> ${esc(e.message)}</div>`;
         }
     }
 
@@ -736,20 +778,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await apiGet(`/recipes/check?product_id=${productId}&quantity=${jumlah}`);
             let html = '';
             if(data.sufficient){
-                html = `<div style="color:#27AE60;font-weight:bold;margin-bottom:6px;">✅ Stok CUKUP untuk ${fmtNum(data.quantity)} ${esc(data.product_name)}</div>`;
+                html = `<div style="color:#27AE60;font-weight:bold;margin-bottom:6px;">Stok CUKUP untuk ${fmtNum(data.quantity)} ${esc(data.product_name)}</div>`;
             } else {
-                html = `<div style="color:#E74C3C;font-weight:bold;margin-bottom:6px;">❌ Stok TIDAK CUKUP untuk ${fmtNum(data.quantity)} ${esc(data.product_name)}</div>`;
+                html = `<div style="color:#E74C3C;font-weight:bold;margin-bottom:6px;">Stok TIDAK CUKUP untuk ${fmtNum(data.quantity)} ${esc(data.product_name)}</div>`;
             }
             html += (data.items || []).map(it => {
                 const rincian = `${esc(it.ingredient_name)}: butuh ${fmtNum(it.needed)} ${esc(it.unit)}, stok ${fmtNum(it.stock)} ${esc(it.unit)}`;
                 if(it.enough){
-                    return `<div style="color:#27AE60;">${rincian} — cukup</div>`;
+                    return `<div style="color:#27AE60;">${rincian} - cukup</div>`;
                 }
-                return `<div style="color:#E74C3C;">${rincian} — KURANG ${fmtNum(it.deficit)} ${esc(it.unit)}</div>`;
+                return `<div style="color:#E74C3C;">${rincian} - KURANG ${fmtNum(it.deficit)} ${esc(it.unit)}</div>`;
             }).join('');
             hasilEl.innerHTML = html;
         } catch(e) {
-            hasilEl.innerHTML = `<div style="color:#E74C3C;">⚠️ ${esc(e.message)}</div>`;
+            hasilEl.innerHTML = `<div style="color:#E74C3C;"> ${esc(e.message)}</div>`;
         }
     }
 
@@ -780,15 +822,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 if(editingRecipeId){
                     await apiPatch('/recipes/' + editingRecipeId, payload);
-                    alert(`✅ Resep ${namaProduk} — ${namaBahan} berhasil diperbarui!`);
+                    alert(`Resep ${namaProduk} - ${namaBahan} berhasil diperbarui!`);
                 } else {
                     await apiPost('/recipes/', payload);
-                    alert(`✅ Resep ${namaProduk} — ${namaBahan} berhasil ditambahkan!`);
+                    alert(`Resep ${namaProduk} - ${namaBahan} berhasil ditambahkan!`);
                 }
                 resetRecipeForm();
                 loadRecipes();
             } catch(e) {
-                alert(`❌ ${e.message}`);
+                alert(`${e.message}`);
             }
         });
     }
@@ -828,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         recipe = (await apiGet('/recipes/')).find(r => String(r.id) === String(id));
                     } catch(err) {
-                        alert(`❌ ${err.message}`);
+                        alert(`${err.message}`);
                         return;
                     }
                 }
@@ -855,15 +897,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const recipe = recipesCache.find(r => String(r.id) === String(id));
                 const prod = recipe ? productsCache.find(p => p.id === recipe.product_id) : null;
                 const namaResep = recipe
-                    ? `${prod ? prod.name : 'Produk ' + recipe.product_id} — ${recipe.ingredient_name}`
+                    ? `${prod ? prod.name : 'Produk ' + recipe.product_id} - ${recipe.ingredient_name}`
                     : 'ini';
                 if(!confirm(`Hapus resep "${namaResep}"?`)) return;
                 try {
                     await apiDelete('/recipes/' + id);
-                    alert('✅ Resep berhasil dihapus!');
+                    alert('Resep berhasil dihapus!');
                     loadRecipes();
                 } catch(err) {
-                    alert(`❌ ${err.message}`);
+                    alert(`${err.message}`);
                 }
             }
         });
@@ -885,7 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
                         <div>
                             <strong>${esc(c.name)}</strong>
-                            <div style="font-size:13px;color:#888;">${esc(c.address || '-')} • ${esc(c.phone || '-')}</div>
+                            <div style="font-size:13px;color:#888;">${esc(c.address || '-')} - ${esc(c.phone || '-')}</div>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <button data-id="${c.id}" data-action="edit" style="font-size:12px;padding:4px 10px;border-radius:4px;border:1px solid #2980B9;background:#fff;color:#2980B9;cursor:pointer;">Edit</button>
@@ -895,7 +937,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `).join('') || '<div class="box-list">Belum ada pelanggan.</div>';
         } catch(e) {
-            listEl.innerHTML = `<div class="box-list">⚠️ ${esc(e.message)}</div>`;
+            listEl.innerHTML = `<div class="box-list"> ${esc(e.message)}</div>`;
         }
     }
 
@@ -912,15 +954,15 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 if(editingCustomerId){
                     await apiPut('/customers/' + editingCustomerId, { name: nama, address: alamat, phone: telp });
-                    alert(`✅ Pelanggan ${nama} berhasil diperbarui!`);
+                    alert(`Pelanggan ${nama} berhasil diperbarui!`);
                 } else {
                     await apiPost('/customers', { name: nama, address: alamat, phone: telp });
-                    alert(`✅ Pelanggan ${nama} berhasil ditambahkan!`);
+                    alert(`Pelanggan ${nama} berhasil ditambahkan!`);
                 }
                 resetCustomerForm();
                 loadCustomers();
             } catch(e) {
-                alert(`❌ ${e.message}`);
+                alert(`${e.message}`);
             }
         });
     }
@@ -959,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         cust = (await apiGet('/customers')).find(c => String(c.id) === String(id));
                     } catch(err) {
-                        alert(`❌ ${err.message}`);
+                        alert(`${err.message}`);
                         return;
                     }
                 }
@@ -985,10 +1027,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!confirm(`Hapus pelanggan "${namaCust}"?`)) return;
                 try {
                     await apiDelete('/customers/' + id);
-                    alert('✅ Pelanggan berhasil dihapus!');
+                    alert('Pelanggan berhasil dihapus!');
                     loadCustomers();
                 } catch(err) {
-                    alert(`❌ ${err.message}`);
+                    alert(`${err.message}`);
                 }
             }
         });
@@ -1026,11 +1068,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `).join('') || '<div class="box-list">Belum ada penjualan.</div>';
         } catch(e) {
-            listEl.innerHTML = `<div class="box-list">⚠️ ${esc(e.message)}</div>`;
+            listEl.innerHTML = `<div class="box-list"> ${esc(e.message)}</div>`;
         }
     }
 
-    // ---- Prediksi Produksi Besok (AI) — notifikasi H-1 di section Pesanan ----
+    // ---- Prediksi Produksi Besok (AI) - notifikasi H-1 di section Pesanan ----
     async function loadSalesPrediction(){
         const box = document.getElementById('box-prediksi-besok');
         if(!box) return;
@@ -1042,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             box.innerHTML = `
                 <h2 class="section-heading">Prediksi Produksi Besok (${esc(pred.date)})</h2>
-                <div style="font-size:13px;color:#888;margin-bottom:8px;">~${fmtNum(pred.predicted_units)} unit produksi • ~${fmtNum(pred.predicted_individuals)} pembeli (dari ${pred.data_points} hari data penjualan individu, confidence ${pred.confidence_pct}%).</div>
+                <div style="font-size:13px;color:#888;margin-bottom:8px;">~${fmtNum(pred.predicted_units)} unit produksi - ~${fmtNum(pred.predicted_individuals)} pembeli (dari ${pred.data_points} hari data penjualan individu, confidence ${pred.confidence_pct}%).</div>
             `;
         } catch(e) {
             box.innerHTML = '';
@@ -1080,16 +1122,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 if(editingSaleId){
                     await apiPut('/sales/' + editingSaleId, payload);
-                    alert(`✅ Penjualan ${namaProduk} (${individu} individu) diperbarui!`);
+                    alert(`Penjualan ${namaProduk} (${individu} individu) diperbarui!`);
                 } else {
                     await apiPost('/sales/', payload);
-                    alert(`✅ Penjualan ${namaProduk} (${individu} individu) disimpan!`);
+                    alert(`Penjualan ${namaProduk} (${individu} individu) disimpan!`);
                 }
                 resetSaleForm();
                 loadSales(lastSalesFilter || 'hari');
                 loadSalesPrediction();
             } catch(e) {
-                alert(`❌ ${e.message}`);
+                alert(`${e.message}`);
             }
         });
     }
@@ -1128,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const path = (lastSalesFilter === 'hari') ? '/sales/today' : '/sales/';
                         sale = (await apiGet(path)).find(s => String(s.id) === String(id));
                     } catch(err) {
-                        alert(`❌ ${err.message}`);
+                        alert(`${err.message}`);
                         return;
                     }
                 }
@@ -1156,11 +1198,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!confirm(`Hapus penjualan "${namaSale}"?`)) return;
                 try {
                     await apiDelete('/sales/' + id);
-                    alert('✅ Penjualan berhasil dihapus!');
+                    alert('Penjualan berhasil dihapus!');
                     loadSales(lastSalesFilter || 'hari');
                     loadSalesPrediction();
                 } catch(err) {
-                    alert(`❌ ${err.message}`);
+                    alert(`${err.message}`);
                 }
             }
         });
@@ -1188,13 +1230,22 @@ document.addEventListener('DOMContentLoaded', () => {
     bindFilter(document.getElementById('btn-semua-bahan'), document.getElementById('btn-hari-bahan'), (f) => loadStocks(f));
     // Pesanan: 'semua' = riwayat, 'hari' = pesanan hari ini
     bindFilter(document.getElementById('btn-semua-pesanan'), document.getElementById('btn-hari-pesanan'), (f) => loadOrders(f));
-    // Pelanggan: data statis per-request, dua filter sama-sama ambil semua
-    bindFilter(document.getElementById('btn-semua-pelanggan'), document.getElementById('btn-hari-pelanggan'), (f) => loadCustomers());
+    // Pelanggan: TIDAK ada endpoint data pelanggan per hari. Tombol "Hari Ini"
+    // di-DISABLE dengan penjelasan jujur (anti-fitur-bohongan) - daftar pelanggan
+    // selalu menampilkan semua pelanggan.
+    const btnHariPelanggan = document.getElementById('btn-hari-pelanggan');
+    if(btnHariPelanggan){
+        btnHariPelanggan.disabled = true;
+        btnHariPelanggan.title = 'Tidak tersedia: daftar pelanggan selalu menampilkan semua pelanggan';
+        btnHariPelanggan.style.opacity = '0.45';
+        btnHariPelanggan.style.cursor = 'not-allowed';
+    }
+    bindFilter(document.getElementById('btn-semua-pelanggan'), btnHariPelanggan, (f) => loadCustomers());
     // Penjualan: 'semua' = riwayat, 'hari' = penjualan hari ini
     bindFilter(document.getElementById('btn-semua-penjualan'), document.getElementById('btn-hari-penjualan'), (f) => loadSales(f));
 
     // ===================== TOMBOL "TAMBAH DATA" (toggle form) =====================
-    // Setiap tombol .btn-tambah punya data-target → form id yang ditampilkan/di-sembunyikan
+    // Setiap tombol .btn-tambah punya data-target -> form id yang ditampilkan/di-sembunyikan
     const btnTambahList = document.querySelectorAll('.btn-tambah');
     btnTambahList.forEach(button => {
         button.addEventListener('click', function(){
@@ -1252,14 +1303,14 @@ document.addEventListener('DOMContentLoaded', () => {
             URL.revokeObjectURL(url);
         });
 
-        // Upload CSV → POST /api/import/{kind} (body = file mentah)
+        // Upload CSV -> POST /api/import/{kind} (body = file mentah)
         btnUpload.addEventListener('click', async function(){
             if(!fileInput.files || fileInput.files.length === 0){
                 alert('Pilih file CSV dulu');
                 return;
             }
             const file = fileInput.files[0];
-            if(hasil) hasil.innerHTML = '⏳ Mengupload...';
+            if(hasil) hasil.innerHTML = 'Mengupload...';
             try {
                 const res = await fetch(`${API}/import/${kind}`, {
                     method: 'POST',
@@ -1275,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const txt = await res.text().catch(() => '');
                         if(txt) msg = txt;
                     }
-                    if(hasil) hasil.innerHTML = `<div style="color:#E74C3C;">⚠️ ${esc(msg)}</div>`;
+                    if(hasil) hasil.innerHTML = `<div style="color:#E74C3C;"> ${esc(msg)}</div>`;
                     return;
                 }
                 const data = await res.json();
@@ -1292,7 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(fileInput) fileInput.value = '';
                 if(onDone) onDone();
             } catch(e) {
-                if(hasil) hasil.innerHTML = `<div style="color:#E74C3C;">⚠️ ${esc(e.message)}</div>`;
+                if(hasil) hasil.innerHTML = `<div style="color:#E74C3C;"> ${esc(e.message)}</div>`;
             }
         });
     }
@@ -1360,4 +1411,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSalesPrediction();
     loadRecipes();
     loadProductsCache();
+    loadChatHistory();
 });
