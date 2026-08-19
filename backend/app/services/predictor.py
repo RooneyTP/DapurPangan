@@ -4,14 +4,22 @@ FR-MFG-001: Prediksi jumlah produksi harian.
 Model: LinearRegression (scikit-learn) dengan retrain otomatis.
 Ini adalah fine-tuning: setiap data baru → weight model berubah.
 """
+import math
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
-from datetime import date, timedelta
-from typing import Optional
+from datetime import date
 import logging
 
 logger = logging.getLogger("daparpangan.predictor")
+
+
+def _isfinite(x) -> bool:
+    """True kalau x bisa jadi float yang finite (bukan nan/inf)."""
+    try:
+        return math.isfinite(float(x))
+    except (TypeError, ValueError):
+        return False
 
 
 class ProductionPredictor:
@@ -29,7 +37,6 @@ class ProductionPredictor:
         self.is_trained = False
         self.X: list[list[float]] = []  # feature matrix
         self.y: list[float] = []         # target values
-        self.last_train_date: Optional[date] = None
 
     def reset(self) -> None:
         """Kosongkan data training (dipakai saat re-seed dari DB)."""
@@ -38,7 +45,6 @@ class ProductionPredictor:
         self.is_trained = False
         self.X = []
         self.y = []
-        self.last_train_date = None
 
     def _extract_features(self, d: date) -> list[float]:
         """Ekstrak fitur dari tanggal untuk prediksi."""
@@ -53,8 +59,12 @@ class ProductionPredictor:
         """Tambah data produksi baru → fine-tune model.
 
         Ini adalah fine-tuning: setiap titik data baru mengubah
-        weight model secara permanen.
+        weight model secara permanen. Input non-finite (nan/inf)
+        diabaikan supaya tidak meracuni model.
         """
+        if not _isfinite(quantity):
+            logger.warning(f"Data point diabaikan (quantity non-finite): ({d}, {quantity})")
+            return
         features = self._extract_features(d)
         self.X.append(features)
         self.y.append(float(quantity))
@@ -78,48 +88,66 @@ class ProductionPredictor:
             X_scaled = self.scaler.transform(X_arr)
             self.model.fit(X_scaled, y_arr)
             self.is_trained = True
-            self.last_train_date = date.today()
         except Exception as e:
             logger.warning(f"Fine-tune gagal: {e}")
 
     def predict(self, target_date: date) -> dict:
         """Prediksi produksi untuk tanggal tertentu.
 
-        Returns dict dengan: prediction, confidence, lower_bound, upper_bound
+        Returns dict dengan: prediction, confidence, lower_bound, upper_bound.
+        Kalau BELUM ADA data sama sekali → prediction None + confidence 0
+        (indikator "belum cukup data", bukan angka fiktif).
         """
+        # Tidak ada data → jujur bilang belum bisa prediksi (bukan 200/50% fiktif)
+        if not self.y:
+            return {
+                "prediction": None,
+                "confidence_pct": 0,
+                "confidence_bar": "Belum cukup data",
+                "lower_bound": None,
+                "upper_bound": None,
+                "data_points": 0,
+                "fine_tuned": False,
+            }
+
         features = np.array([self._extract_features(target_date)])
 
         if not self.is_trained or len(self.y) < 3:
-            # Fallback: rata-rata sederhana
-            avg = int(np.mean(self.y)) if self.y else 200
-            std = int(np.std(self.y)) if len(self.y) > 1 else 20
+            # Fallback: rata-rata sederhana dari data riil yang ada
+            avg = float(np.mean(self.y))
+            std = float(np.std(self.y)) if len(self.y) > 1 else 0.0
+            avg_int = int(round(avg)) if _isfinite(avg) else 0
+            std_int = int(round(std)) if _isfinite(std) else 0
             return {
-                "prediction": avg,
+                "prediction": avg_int,
                 "confidence_pct": 50,
                 "confidence_bar": "●●●○○○ 50%",
-                "lower_bound": max(0, avg - std),
-                "upper_bound": avg + std,
+                "lower_bound": max(0, avg_int - std_int),
+                "upper_bound": avg_int + std_int,
                 "data_points": len(self.y),
                 "fine_tuned": False,
             }
 
         try:
             X_scaled = self.scaler.transform(features)
-            pred = self.model.predict(X_scaled)[0]
-            pred_int = int(round(pred))
+            pred = float(self.model.predict(X_scaled)[0])
+            if not _isfinite(pred):
+                raise ValueError(f"Prediksi non-finite: {pred}")
 
-            # Confidence: berdasarkan jumlah data training
             n = len(self.y)
-            base_conf = min(92, 55 + int(n * 1.2))
-            confidence_pct = min(95, base_conf)
+            # Confidence: berdasarkan jumlah data training (satu clamp saja)
+            confidence_pct = min(92, 55 + int(n * 1.2))
 
             # Residual std untuk lower/upper bound
             y_pred_all = self.model.predict(self.scaler.transform(np.array(self.X)))
-            residuals = np.std(self.y - y_pred_all) if len(self.y) > 3 else pred * 0.1
+            residuals = float(np.std(self.y - y_pred_all)) if len(self.y) > 3 else pred * 0.1
+            if not _isfinite(residuals):
+                residuals = 5.0
             residuals = max(residuals, 5)  # minimal 5 unit
 
+            pred_int = max(0, int(round(pred)))
             return {
-                "prediction": max(0, pred_int),
+                "prediction": pred_int,
                 "confidence_pct": confidence_pct,
                 "confidence_bar": "●" * (confidence_pct // 10) + "○" * (10 - confidence_pct // 10) + f" {confidence_pct}%",
                 "lower_bound": max(0, int(round(pred_int - residuals * 1.5))),
@@ -130,13 +158,14 @@ class ProductionPredictor:
             }
         except Exception as e:
             logger.warning(f"Prediksi error: {e}")
-            avg = int(np.mean(self.y))
+            avg = float(np.mean(self.y))
+            avg_int = int(round(avg)) if _isfinite(avg) else 0
             return {
-                "prediction": avg,
+                "prediction": avg_int,
                 "confidence_pct": 50,
                 "confidence_bar": "●●●●●○○○○○ 50%",
-                "lower_bound": max(0, avg - 20),
-                "upper_bound": avg + 20,
+                "lower_bound": max(0, avg_int - 20),
+                "upper_bound": avg_int + 20,
                 "data_points": len(self.y),
                 "fine_tuned": False,
             }

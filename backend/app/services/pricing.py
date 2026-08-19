@@ -3,9 +3,40 @@
 Hitung biaya produksi dari resep + harga bahan baku,
 lalu rekomendasi harga jual minimal & optimal.
 """
+import math
+import logging
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import Product, Recipe, Stock
+
+logger = logging.getLogger("daparpangan.pricing")
+
+
+def _convert_to_stock_unit(quantity: float, recipe_unit: str, stock_unit: str) -> float:
+    """Konversi kuantitas resep ke satuan stok sebelum perkalian harga.
+
+    g → kg dibagi 1000, ml → l dibagi 1000 (dan kebalikannya);
+    pcs/lembar/bungkus & satuan sama → passthrough.
+    """
+    ru = (recipe_unit or '').strip().lower()
+    su = (stock_unit or '').strip().lower()
+    if ru == su:
+        return quantity
+    if ru == 'g' and su == 'kg':
+        return quantity / 1000.0
+    if ru == 'kg' and su == 'g':
+        return quantity * 1000.0
+    if ru == 'ml' and su == 'l':
+        return quantity / 1000.0
+    if ru == 'l' and su == 'ml':
+        return quantity * 1000.0
+    if ru == 'liter' and su == 'l':
+        return quantity
+    if ru == 'l' and su == 'liter':
+        return quantity
+    # pcs / lembar / bungkus dan kombinasi lain: passthrough
+    return quantity
 
 
 def compute_production_cost(db: Session, product: Product) -> tuple[float, list[dict]]:
@@ -19,12 +50,24 @@ def compute_production_cost(db: Session, product: Product) -> tuple[float, list[
     total_cost = 0.0
 
     for r in recipes:
+        # Lookup stok case-insensitive (resep 'kedelai' ↔ stok 'Kedelai')
         stock = db.query(Stock).filter(
-            Stock.ingredient_name == r.ingredient_name
+            func.lower(Stock.ingredient_name) == func.lower(r.ingredient_name)
         ).first()
 
-        if stock and stock.price_per_unit:
-            cost = r.quantity_per_unit * stock.price_per_unit
+        # Bedakan None (belum ada harga) vs 0 (harga diisi nol — peringatkan)
+        if stock is not None and stock.price_per_unit is not None:
+            qty_converted = _convert_to_stock_unit(r.quantity_per_unit, r.unit, stock.unit)
+            price = stock.price_per_unit
+            if price == 0:
+                logger.warning(
+                    f"Harga stok '{r.ingredient_name}' = 0 (mungkin belum diisi) — "
+                    f"biaya dihitung 0."
+                )
+            cost = qty_converted * price
+            if not math.isfinite(cost):
+                logger.warning(f"Biaya non-finite untuk '{r.ingredient_name}' — dihitung 0.")
+                cost = 0.0
             total_cost += cost
             breakdown.append({
                 "ingredient": r.ingredient_name,
@@ -43,6 +86,9 @@ def compute_production_cost(db: Session, product: Product) -> tuple[float, list[
                 "cost_per_unit": 0.0,
             })
 
+    if not math.isfinite(total_cost):
+        logger.warning("Total biaya non-finite — dikembalikan 0.")
+        total_cost = 0.0
     return round(total_cost, 2), breakdown
 
 

@@ -6,26 +6,66 @@ Fallback: data harga statis internal jika API eksternal gagal.
 
 Struktur data konsisten — frontend tidak perlu tahu sumbernya.
 """
+import copy
 import json
 import logging
+import re
 import urllib.request
-from datetime import date, timedelta
+from datetime import date
 
 logger = logging.getLogger("daparpangan.prices")
 
 # ---------------------------------------------------------------------------
-# FALLBACK DATA — harga acuan nasional (Rp/kg) saat API luar tidak tersedia
+# FALLBACK DATA — harga acuan nasional (Rp/kg) saat API luar tidak tersedia.
+# Tanggal TIDAK disimpan di sini — selalu date.today() via _fallback_prices().
 # ---------------------------------------------------------------------------
 FALLBACK_PRICES = {
-    "kedelai":   {"name": "Kedelai",   "price": 11500, "unit": "kg", "date": "2026-07-16"},
-    "cabai_rawit": {"name": "Cabai Rawit", "price": 38500, "unit": "kg", "date": "2026-07-16"},
-    "cabai_merah": {"name": "Cabai Merah", "price": 42000, "unit": "kg", "date": "2026-07-16"},
-    "bawang_merah": {"name": "Bawang Merah", "price": 35000, "unit": "kg", "date": "2026-07-16"},
-    "tepung_terigu": {"name": "Tepung Terigu", "price": 12500, "unit": "kg", "date": "2026-07-16"},
-    "telur_ayam": {"name": "Telur Ayam", "price": 28000, "unit": "kg", "date": "2026-07-16"},
-    "gula":     {"name": "Gula Pasir", "price": 17500, "unit": "kg", "date": "2026-07-16"},
-    "minyak_goreng": {"name": "Minyak Goreng", "price": 15000, "unit": "liter", "date": "2026-07-16"},
+    "kedelai":   {"name": "Kedelai",   "price": 11500, "unit": "kg"},
+    "cabai_rawit": {"name": "Cabai Rawit", "price": 38500, "unit": "kg"},
+    "cabai_merah": {"name": "Cabai Merah", "price": 42000, "unit": "kg"},
+    "bawang_merah": {"name": "Bawang Merah", "price": 35000, "unit": "kg"},
+    "tepung_terigu": {"name": "Tepung Terigu", "price": 12500, "unit": "kg"},
+    "telur_ayam": {"name": "Telur Ayam", "price": 28000, "unit": "kg"},
+    "gula":     {"name": "Gula Pasir", "price": 17500, "unit": "kg"},
+    "minyak_goreng": {"name": "Minyak Goreng", "price": 15000, "unit": "liter"},
 }
+
+
+def _fallback_prices() -> dict:
+    """Deep-copy FALLBACK_PRICES per pemakaian + tanggal = hari ini."""
+    data = copy.deepcopy(FALLBACK_PRICES)
+    today = date.today().isoformat()
+    for v in data.values():
+        v["date"] = today
+    return data
+
+
+def _sanitize_number(raw) -> float:
+    """Ubah string harga jadi float: '11.500'/'11,500' (ribuan) → 11500.0.
+
+    Mendukung pemisah ribuan titik/koma, desimal '11,5' (Eropa) dan '11.5'.
+    Raise ValueError kalau tidak bisa diparse.
+    """
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    s = str(raw).strip().replace('\u00a0', '').replace(' ', '')
+    if not s:
+        raise ValueError(f"harga kosong: {raw!r}")
+    # Pola ribuan: 1.500 / 1,500 / 12.500.000 (dengan opsional desimal di akhir)
+    m = re.fullmatch(r'(\d{1,3}(?:[.,]\d{3})+)(?:[.,](\d+))?', s)
+    if m:
+        int_part = m.group(1).replace('.', '').replace(',', '')
+        frac = m.group(2) or ''
+        s = int_part + (('.' + frac) if frac else '')
+    else:
+        # Koma desimal tunggal gaya Eropa: 11,5 → 11.5
+        if ',' in s and '.' not in s:
+            s = s.replace(',', '.')
+    try:
+        return float(s)
+    except ValueError:
+        raise ValueError(f"harga tidak valid: {raw!r}")
+
 
 # ---------------------------------------------------------------------------
 # KONFIGURASI KOMODITAS YANG DIPANTAU (sesuai kebutuhan IRTP)
@@ -73,7 +113,7 @@ def fetch_prices() -> dict:
         return _cache["data"]
     # 2) Jangan coba network lagi kalau baru gagal (dalam cooldown)
     if now - _fail["ts"] < FAIL_COOLDOWN_SECONDS:
-        return dict(FALLBACK_PRICES)
+        return _fallback_prices()
 
     try:
         req = urllib.request.Request(
@@ -94,17 +134,20 @@ def fetch_prices() -> dict:
         except json.JSONDecodeError:
             logger.info("Bapanas: respons bukan JSON murni — pakai fallback")
             _fail["ts"] = now  # aktifkan cooldown supaya request berikutnya instan
-            return dict(FALLBACK_PRICES)
+            return _fallback_prices()
 
     except Exception as e:
         logger.warning(f"Bapanas tidak tersedia ({e}) — pakai fallback")
         _fail["ts"] = now  # aktifkan cooldown supaya request berikutnya instan
-        return dict(FALLBACK_PRICES)
+        return _fallback_prices()
 
 
 def _parse_bapanas(data) -> dict:
-    """Parse struktur data Bapanas (beragam bentuk) ke format standar kita."""
-    result = dict(FALLBACK_PRICES)
+    """Parse struktur data Bapanas (beragam bentuk) ke format standar kita.
+
+    Satu item gagal diparse TIDAK membatalkan item lain (try/continue per item).
+    """
+    result = _fallback_prices()
     try:
         # Bentuk umum: list of {kode, nama, harga, ...} atau dict {komoditas: {...}}
         items = data if isinstance(data, list) else data.get("data", [])
@@ -113,24 +156,31 @@ def _parse_bapanas(data) -> dict:
         for item in items:
             if not isinstance(item, dict):
                 continue
-            name = str(item.get("nama", item.get("name", ""))).lower()
-            price = item.get("harga", item.get("price"))
-            if not price:
+            try:
+                name = str(item.get("nama", item.get("name", ""))).lower()
+                price = item.get("harga", item.get("price"))
+                if price is None or price == "":
+                    continue
+                price_f = _sanitize_number(price)
+                # Pilih komoditas dengan alias TERPANJANG yang match —
+                # hindari 'Cabe Merah' salah masuk ke 'cabai rawit' (alias 'cabe')
+                best_key, best_len = None, 0
+                for key, cfg in MONITORED.items():
+                    for a in cfg["alias"]:
+                        if a in name and len(a) > best_len:
+                            best_key, best_len = key, len(a)
+                if best_key:
+                    result[best_key] = {
+                        "name": MONITORED[best_key]["name"],
+                        "price": price_f,
+                        "unit": "kg",
+                        "date": str(date.today()),
+                    }
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    f"Item Bapanas dilewati ({type(e).__name__}: {e}): {item}"
+                )
                 continue
-            # Pilih komoditas dengan alias TERPANJANG yang match —
-            # hindari 'Cabe Merah' salah masuk ke 'cabai rawit' (alias 'cabe')
-            best_key, best_len = None, 0
-            for key, cfg in MONITORED.items():
-                for a in cfg["alias"]:
-                    if a in name and len(a) > best_len:
-                        best_key, best_len = key, len(a)
-            if best_key:
-                result[best_key] = {
-                    "name": MONITORED[best_key]["name"],
-                    "price": float(price),
-                    "unit": "kg",
-                    "date": str(date.today()),
-                }
     except Exception as e:
         logger.warning(f"Parse Bapanas gagal ({e}) — pakai fallback")
     return result
@@ -144,7 +194,6 @@ def get_price_alerts() -> list[dict]:
     """
     prices = fetch_prices()
     alerts = []
-    today = date.today()
 
     for key, price_info in prices.items():
         cfg = MONITORED.get(key)

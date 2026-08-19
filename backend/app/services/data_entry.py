@@ -4,19 +4,22 @@ Pola yang didukung (prioritas tinggi → rendah):
 1. Pesanan massal   : "hari ini ada 100 pelanggan yang masing masing beli 1 tempe"
 2. Pesanan spesifik : "pesanan Warung A 30" / "catat pesanan Budi 10 tempe"
 3. Pelanggan baru   : "tambah pelanggan Budi, Jl. Kenanga 5, 081234567890"
-4. Stok             : "stok kedelai 50 kg" / "tambah stok ragi 0.1 kg" / "stok plastik 220 pcs harga 150"
+4. Stok             : "stok kedelai 30 kg" (menimpa) / "tambah stok ragi 0.1 kg" (menambah)
 
 Semua handler deterministik: kalau pesan cocok → simpan ke DB + return string
 konfirmasi; kalau tidak cocok → return None (biarkan chat normal ke LLM).
 Tidak pernah raise HTTPException — selalu return string atau None.
 """
+import logging
 import re
 from datetime import date, timedelta
 
 from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.models import Customer, Order, Product, Stock
+
+logger = logging.getLogger("daparpangan.data_entry")
 
 # Pertanyaan tidak pernah dianggap input data
 _QUESTION_PREFIX = re.compile(
@@ -27,29 +30,32 @@ _QUESTION_PREFIX = re.compile(
 _BULK_CUSTOMERS = re.compile(r'(\d+)\s*pelanggan', re.IGNORECASE)
 _BULK_EACH = re.compile(r'masing[-\s]*masing\s*(?:beli|membeli)?\s*(\d+)', re.IGNORECASE)
 _BULK_ATAS_NAMA = re.compile(
-    r'atas nama\s+([A-Za-z0-9][A-Za-z0-9 .\'-]*?)(?=\s+untuk|\s*$)', re.IGNORECASE
+    r'atas nama\s+([A-Za-z0-9][A-Za-z0-9 .\'\-]*?)(?=\s+untuk|\s*$)', re.IGNORECASE
 )
 
 # --- Pola 2: pesanan spesifik ---
 _SPECIFIC_ORDER = re.compile(
-    r'(?:(?:catat|input)\s+)?(?:pesanan|order)\s+([A-Za-z0-9][A-Za-z0-9 .\'-]*?)\s+(\d+)\s*([A-Za-z ]+)?$',
+    r'(?:(?:catat|input)\s+)?(?:pesanan|order)\s+([A-Za-z0-9][A-Za-z0-9 .\'\-]*?)\s+(\d+)\s*([A-Za-z ]+)?$',
     re.IGNORECASE,
 )
 
 # --- Pola 3: pelanggan baru ---
 _NEW_CUSTOMER = re.compile(
-    r'(?:tambah|daftar(?:kan)?)\s+pelanggan\s+([A-Za-z0-9][A-Za-z0-9 .\'-]*?)'
+    r'(?:tambah|daftar(?:kan)?)\s+pelanggan\s+([A-Za-z0-9][A-Za-z0-9 .\'\-]*?)'
     r'(?:\s*,\s*([^,]+))?(?:\s*,\s*(\S+))?\s*$',
     re.IGNORECASE,
 )
 
 # --- Pola 4: stok ---
+# Awalan 'tambah' = menambah (+=), 'set'/'input'/tanpa awalan = menimpa (=).
+# Anchor $ supaya kalimat panjang/pertanyaan tidak masuk pola ini.
+# Harga opsional di akhir ikut ditangkap (grup 5).
 _STOCK = re.compile(
-    r'(?:tambah\s+|input\s+)?stok\s+([A-Za-z0-9][A-Za-z0-9 .\'-]*?)'
-    r'\s+(\d+(?:[.,]\d+)?)\s*(kg|g|liter|lembar|pcs|bungkus)?',
+    r'(?:(tambah(?:kan)?|set|input)\s+)?stok\s+([A-Za-z0-9][A-Za-z0-9 .\'\-]*?)'
+    r'\s+(\d+(?:[.,]\d+)?)\s*(kg|g|liter|lembar|pcs|bungkus)?'
+    r'(?:\s+harga\s*(?:rp\s*)?(\d+))?\s*$',
     re.IGNORECASE,
 )
-_STOCK_PRICE = re.compile(r'harga\s*(?:rp\s*)?(\d+)', re.IGNORECASE)
 
 
 def try_data_entry(message: str, db) -> str | None:
@@ -91,10 +97,13 @@ def _find_or_create_customer(db, name: str) -> Customer:
 
 
 def _find_product(db, message: str):
-    """Cari produk yang namanya MUNCUL dalam pesan (case-insensitive contains)."""
+    """Cari produk yang namanya muncul sebagai KATA utuh (word-boundary).
+
+    'tahukah' TIDAK cocok dengan produk 'tahu' karena \b memisahkan kata.
+    """
     ml = message.lower()
     for p in db.query(Product).all():
-        if p.name.lower() in ml:
+        if re.search(rf'\b{re.escape(p.name.lower())}\b', ml):
             return p
     return None
 
@@ -117,11 +126,12 @@ def _first_product_or_none(db):
 
 
 def _commit_or_rollback(db, ok_msg: str, err_msg: str) -> str:
-    """Commit; kalau IntegrityError (race duplikat) → rollback + pesan error."""
+    """Commit; kalau error SQLAlchemy umum (IntegrityError dkk) → rollback + pesan error."""
     try:
         db.commit()
-    except IntegrityError:
+    except SQLAlchemyError as e:
         db.rollback()
+        logger.warning(f"Commit gagal ({type(e).__name__}): {e}")
         return err_msg
     return ok_msg
 
@@ -181,6 +191,9 @@ def _specific_order(message: str, db) -> str | None:
     qty = int(m.group(2))
     if qty < 1:
         return "Jumlah pesanan harus minimal 1."
+    # Cap konsisten dengan jalur pesanan massal (maksimal 10000)
+    if qty > 10000:
+        return f"Jumlah pesanan tidak masuk akal ({qty}, maksimal 10000). Cek lagi ya."
 
     prod = _find_product(db, message)
     if prod is None:
@@ -225,31 +238,47 @@ def _new_customer(message: str, db) -> str | None:
 # ============================= Pola 4: stok =============================
 
 def _stock_entry(message: str, db) -> str | None:
-    """'[tambah|input] stok <nama> <jumlah> [unit] [harga Rp N]' → upsert Stock."""
-    m = _STOCK.search(message)
+    """'[tambah|set|input] stok <nama> <jumlah> [unit] [harga Rp N]' → upsert Stock.
+
+    - 'tambah' = menambah stok (+=), bukan menimpa.
+    - Tanpa awalan / 'set' / 'input' = menimpa (=).
+    - Pertanyaan (akhiran '?') atau kalimat negasi TIDAK dieksekusi.
+    """
+    msg = message.strip()
+    # Pertanyaan & negasi bukan perintah input — jangan ubah data
+    if msg.endswith('?'):
+        return None
+    if re.search(r'\b(jangan|bukan|tidak)\b', msg, re.IGNORECASE):
+        return None
+
+    m = _STOCK.search(msg)
     if not m:
         return None
 
-    raw_name = m.group(1).strip()
-    qty = float(m.group(2).replace(',', '.'))
+    prefix = (m.group(1) or '').lower()
+    raw_name = m.group(2).strip()
+    qty = float(m.group(3).replace(',', '.'))
     if qty < 0:
         return "Jumlah stok tidak boleh negatif."
 
     # Simpan nama dengan huruf depan kapital (ragi → Ragi) biar konsisten di DB
     name = raw_name[:1].upper() + raw_name[1:]
     stock = _find_or_create_stock(db, name)
-    unit = m.group(3) or stock.unit or 'kg'
-    stock.quantity = qty
+    unit = m.group(4) or stock.unit or 'kg'
+
+    if prefix.startswith('tambah'):
+        stock.quantity = (stock.quantity or 0) + qty
+        total_str = f"{stock.quantity:g} {unit}"
+        ok = f"✅ Stok {stock.ingredient_name} ditambah {qty:g} {unit} (total: {total_str})"
+    else:
+        stock.quantity = qty
+        ok = f"✅ Stok {stock.ingredient_name} = {qty:g} {unit}"
     stock.unit = unit
 
-    m_price = _STOCK_PRICE.search(message)
     harga = None
-    if m_price:
-        harga = int(m_price.group(1))
+    if m.group(5):
+        harga = int(m.group(5))
         stock.price_per_unit = harga
-
-    qty_str = str(int(qty)) if float(qty).is_integer() else str(qty)
-    ok = f"✅ Stok {stock.ingredient_name} = {qty_str} {unit}"
-    if harga is not None:
         ok += f", harga Rp {harga}"
+
     return _commit_or_rollback(db, ok, "Gagal menyimpan stok (data bentrok). Coba lagi.")
