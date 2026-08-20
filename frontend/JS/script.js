@@ -9,6 +9,16 @@ const API = (() => {
     return 'http://localhost:8000/api';
 })();
 
+// Format tanggal LOKAL (hindari UTC: pada pukul 00.00-06.59 WIB, tanggal
+// UTC masih hari sebelumnya dan default tanggal jadi 'kemarin').
+function todayLocalISO() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // ===================== SIDEBAR NAVIGATION =====================
     const menuItems = document.querySelectorAll('#isi-sidebar .isi');
@@ -552,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const namaPlg = document.getElementById('input-nama-pemesan').value.trim();
             const namaProduk = document.getElementById('input-produk-pesanan').value.trim();
             const jumlah = parseInt(document.getElementById('input-jumlah-pesanan').value);
-            const tanggal = document.getElementById('input-tanggal-pesanan').value || new Date().toISOString().split('T')[0];
+            const tanggal = document.getElementById('input-tanggal-pesanan').value || todayLocalISO();
             const statusEl = document.getElementById('input-status-pesanan');
             const status = (statusEl && statusEl.value) ? statusEl.value : 'pending';
 
@@ -1097,7 +1107,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const namaProduk = document.getElementById('input-produk-penjualan').value.trim();
             const individu = parseInt(document.getElementById('input-individu-penjualan').value);
             const perIndividu = parseInt(document.getElementById('input-perindividu-penjualan').value);
-            const tanggal = document.getElementById('input-tanggal-penjualan').value || new Date().toISOString().split('T')[0];
+            const tanggal = document.getElementById('input-tanggal-penjualan').value || todayLocalISO();
             if(!namaProduk || !individu || !perIndividu){
                 alert('Lengkapi Nama Produk, Jumlah Individu, dan Beli per Individu!');
                 return;

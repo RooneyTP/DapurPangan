@@ -1,6 +1,7 @@
 """Orders & Customer endpoints."""
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import date, timedelta
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -29,6 +30,8 @@ def order_projection(db: Session = Depends(get_db)):
     orders = db.query(Order).filter(Order.date > since14).all()
     pred = predictor.predict(today)
     pred_qty = pred["prediction"]
+    if pred_qty is None:
+        pred_qty = 0
 
     if not orders:
         return {"predicted_total": pred_qty, "items": []}
@@ -86,6 +89,12 @@ def create_customer(data: CustomerBase, db: Session = Depends(get_db)):
     name = data.name.strip()
     if not name:
         raise HTTPException(422, "Nama pelanggan wajib diisi")
+    # Cegah duplikat nama case-insensitive (pola sama seperti stock/recipe)
+    exists = db.query(Customer).filter(
+        func.lower(Customer.name) == name.lower()
+    ).first()
+    if exists:
+        raise HTTPException(409, f"Pelanggan '{name}' sudah ada")
     payload = data.model_dump()
     payload["name"] = name
     c = Customer(**payload)
@@ -110,6 +119,13 @@ def update_customer(customer_id: int, data: CustomerBase, db: Session = Depends(
     name = data.name.strip()
     if not name:
         raise HTTPException(422, "Nama pelanggan wajib diisi")
+    # Cegah duplikat nama case-insensitive, exclude id sendiri
+    exists = db.query(Customer).filter(
+        func.lower(Customer.name) == name.lower(),
+        Customer.id != customer_id
+    ).first()
+    if exists:
+        raise HTTPException(409, f"Pelanggan '{name}' sudah ada")
     payload = data.model_dump()
     payload["name"] = name
     for field, value in payload.items():

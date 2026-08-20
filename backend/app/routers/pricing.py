@@ -12,9 +12,9 @@ router = APIRouter(prefix="/api/pricing", tags=["Pricing"])
 @router.get("/recommendation", response_model=PriceRecommendation)
 def get_price_recommendation(
     product_id: int = Query(1, description="ID produk"),
-    margin_pct: float = Query(20.0, ge=0, le=100, description="Margin target (%)"),
-    market_low: float = Query(4500.0, ge=0, description="Harga pasar terendah"),
-    market_high: float = Query(5500.0, ge=0, description="Harga pasar tertinggi"),
+    margin_pct: float = Query(20.0, ge=0, le=100, allow_inf_nan=False, description="Margin target (%)"),
+    market_low: float = Query(4500.0, ge=0, allow_inf_nan=False, description="Harga pasar terendah"),
+    market_high: float = Query(5500.0, ge=0, allow_inf_nan=False, description="Harga pasar tertinggi"),
     db: Session = Depends(get_db),
 ):
     """Rekomendasi harga jual: minimal + optimal berdasarkan biaya produksi.

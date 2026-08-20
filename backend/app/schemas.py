@@ -6,9 +6,9 @@ from typing import Literal, Optional
 
 # --- Stock ---
 class StockBase(BaseModel):
-    ingredient_name: str
+    ingredient_name: str = Field(max_length=100)
     quantity: float = Field(ge=0, allow_inf_nan=False, description="Tidak boleh negatif")
-    unit: str = "kg"
+    unit: str = Field("kg", max_length=20)
     price_per_unit: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
     min_warning: float = Field(5.0, ge=0, allow_inf_nan=False)
     min_critical: float = Field(1.0, ge=0, allow_inf_nan=False)
@@ -16,9 +16,9 @@ class StockBase(BaseModel):
 
 class StockUpdate(BaseModel):
     """PUT /api/stocks/{id}: field opsional None = pertahankan nilai lama."""
-    ingredient_name: str
+    ingredient_name: str = Field(max_length=100)
     quantity: float = Field(ge=0, allow_inf_nan=False)
-    unit: Optional[str] = None
+    unit: Optional[str] = Field(None, max_length=20)
     price_per_unit: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
     min_warning: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
     min_critical: Optional[float] = Field(None, ge=0, allow_inf_nan=False)
@@ -26,7 +26,7 @@ class StockUpdate(BaseModel):
 
 class StockResponse(StockBase):
     id: int
-    status: str = "aman"
+    status: str = Field("aman", max_length=20)
     updated_at: Optional[datetime] = None
     class Config:
         from_attributes = True
@@ -34,15 +34,15 @@ class StockResponse(StockBase):
 
 # --- Pricing (FR-COM-002) ---
 class PriceBreakdown(BaseModel):
-    ingredient: str
+    ingredient: str = Field(max_length=100)
     quantity_per_unit: float = Field(gt=0, allow_inf_nan=False)
-    unit: str
+    unit: str = Field(max_length=20)
     price_per_unit: float
     cost_per_unit: float
 
 class PriceRecommendation(BaseModel):
     product_id: int
-    product_name: str
+    product_name: str = Field(max_length=100)
     production_cost: float          # biaya produksi per unit (Rp)
     breakdown: list[PriceBreakdown]
     margin_pct: float               # margin target user
@@ -55,9 +55,9 @@ class PriceRecommendation(BaseModel):
 
 # --- Customer ---
 class CustomerBase(BaseModel):
-    name: str
-    address: Optional[str] = None
-    phone: Optional[str] = None
+    name: str = Field(max_length=100)
+    address: Optional[str] = Field(None, max_length=200)
+    phone: Optional[str] = Field(None, max_length=20)
     notes: Optional[str] = None
 
 class CustomerResponse(CustomerBase):
@@ -76,8 +76,8 @@ class OrderCreate(BaseModel):
 
 class OrderResponse(OrderCreate):
     id: int
-    customer_name: Optional[str] = None
-    product_name: Optional[str] = None
+    customer_name: Optional[str] = Field(None, max_length=100)
+    product_name: Optional[str] = Field(None, max_length=100)
     class Config:
         from_attributes = True
 
@@ -91,7 +91,7 @@ class SaleCreate(BaseModel):
 
 class SaleResponse(SaleCreate):
     id: int
-    product_name: Optional[str] = None
+    product_name: Optional[str] = Field(None, max_length=100)
     total_quantity: int = 0
     class Config:
         from_attributes = True
@@ -109,11 +109,11 @@ class DashboardResponse(BaseModel):
 
 # --- Chat ---
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(max_length=500)
 
 class ChatResponse(BaseModel):
     reply: str
 
 class ChatHistoryItem(BaseModel):
-    role: str
+    role: str = Field(max_length=10)
     content: str

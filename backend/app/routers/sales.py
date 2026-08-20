@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from app.database import get_db
 from app.models import Sale, Product
 from app.schemas import SaleCreate, SaleResponse
-from app.services.predictor import sales_predictor
+from app.services.predictor import ProductionPredictor
 
 router = APIRouter(prefix="/api/sales", tags=["Sales"])
 
@@ -68,12 +68,13 @@ def sales_prediction(db: Session = Depends(get_db)):
             s.individual_count for s in sales if s.date == d
         ))
 
-    # Fine-tune predictor sales dari data riil
-    sales_predictor.reset()
+    # Fine-tune predictor sales dari data riil - instance LOKAL per request
+    # (jangan reset+isi singleton global: race condition antar request)
+    sp = ProductionPredictor()
     for d, total in daily_units:
-        sales_predictor.add_data_point(d, total)
+        sp.add_data_point(d, total)
 
-    p = sales_predictor.predict(tomorrow)
+    p = sp.predict(tomorrow)
     avg_individuals = int(round(sum(daily_individuals) / len(daily_individuals)))
 
     return {

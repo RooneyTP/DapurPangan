@@ -14,6 +14,23 @@ from app.services.predictor import predictor
 router = APIRouter(prefix="/api/stocks", tags=["Stock"])
 
 
+def _to_canonical(qty: float, unit: str) -> float:
+    """Konversi qty ke satuan dasar: gram untuk g/kg, mililiter untuk ml/l.
+
+    pcs/bungkus/lembar dan unit tak dikenal: passthrough (asumsi sama).
+    """
+    u = (unit or "").strip().lower()
+    if u == "kg":
+        return qty * 1000.0
+    if u == "g":
+        return qty
+    if u in ("l", "liter"):
+        return qty * 1000.0
+    if u == "ml":
+        return qty
+    return qty
+
+
 @router.get("/recommendations")
 def stock_recommendations(db: Session = Depends(get_db)):
     """Rekomendasi pembelian stok otomatis.
@@ -26,6 +43,8 @@ def stock_recommendations(db: Session = Depends(get_db)):
     today = date.today()
     pred = predictor.predict(today)
     pred_qty = pred["prediction"]
+    if pred_qty is None:
+        pred_qty = 0
 
     products = db.query(Product).all()
 
@@ -57,26 +76,36 @@ def stock_recommendations(db: Session = Depends(get_db)):
             stock_qty = stock.quantity or 0.0
             unit = stock.unit or unit_map.get(name, "kg")
             min_warning = stock.min_warning if stock.min_warning is not None else 5.0
-            deficit = max(0.0, needed - stock_qty)
-            if deficit > 0:
+            # Bandingkan dalam satuan dasar (gram/liter) supaya unit resep
+            # vs unit stok (mis. g vs kg) tidak salah faktor 1000
+            recipe_unit = unit_map.get(name, unit)
+            needed_canon = _to_canonical(needed, recipe_unit)
+            stock_canon = _to_canonical(stock_qty, unit)
+            deficit_canon = max(0.0, needed_canon - stock_canon)
+            if deficit_canon > 0:
                 action = "beli"
-            elif (stock_qty - needed) < min_warning:
+            elif (stock_canon - needed_canon) < _to_canonical(min_warning, unit):
                 action = "waspada"
             else:
                 action = "cukup"
+            # Tampilkan dalam unit stok (kembalikan dari satuan dasar)
+            scale = _to_canonical(1.0, unit)
+            needed_display = needed_canon / scale
+            deficit_display = deficit_canon / scale
         else:
             # Stok tidak tercatat sama sekali → anggap kosong
             stock_qty = 0.0
             unit = unit_map.get(name, "kg")
-            deficit = max(0.0, needed)
+            needed_display = needed
+            deficit_display = max(0.0, needed)
             action = "beli"
 
         items.append({
             "ingredient_name": name,
             "stock": stock_qty,
             "unit": unit,
-            "needed": round(needed, 4),
-            "deficit": round(deficit, 4),
+            "needed": round(needed_display, 4),
+            "deficit": round(deficit_display, 4),
             "action": action,
         })
 

@@ -14,8 +14,10 @@ API_KEY = os.getenv("OPencodeZen_API_KEY")
 BASE_URL = os.getenv("OPencodeZen_BASE_URL", "https://opencode.ai/zen/v1")
 MODEL = os.getenv("OPencodeZen_MODEL", "deepseek-v4-flash-free")
 
-# Batasan interaksi LLM: jangan biarkan chat hang lama saat API bermasalah
-LLM_TIMEOUT_SECONDS = 20
+# Batasan interaksi LLM: 90s cukup untuk max_tokens 2000 (20s sering timeout
+# palsu -> fallback tak perlu); kalau API benar-benar bermasalah, retries
+# tetap membatasi percobaan ulang.
+LLM_TIMEOUT_SECONDS = 90
 LLM_MAX_RETRIES = 1
 # Riwayat chat yang dikirim ke LLM dipotong per pesan (anti konteks membengkak)
 HISTORY_TRUNCATE_CHARS = 500
@@ -31,7 +33,8 @@ FALLBACK_RESPONSES = {
     "produksi": "🏭 Rekomendasi produksi besok dihitung dari riwayat produksi (prediksi ML). Cek dashboard untuk angka prediksi terkini.",
     "stok": "📦 Stok bahan baku lengkap dengan status AMAN/WASPADA/KRITIS ada di menu Stok dashboard.",
     "pelanggan": "📊 Top pelanggan dihitung dari pesanan 7 hari terakhir. Cek dashboard untuk daftar lengkapnya.",
-    "basi": "⚠️ Tempe punya shelf-life ±2 hari — prioritaskan kirim ke pelanggan terdekat dulu.",
+    "basi": "⚠️ Tempe punya shelf-life terbatas - prioritaskan kirim ke pelanggan terdekat dulu.",
+    "biaya": "💡 Biaya produksi & rekomendasi harga dihitung dari resep dan harga bahan baku terbaru. Cek menu Harga di dashboard untuk angka lengkapnya.",
     "ragi": "🔴 Status stok ragi bisa dicek di menu Stok dashboard. Kalau statusnya KRITIS, segera beli.",
     "penjualan": "📈 Untuk menaikkan penjualan: tawarkan pesanan rutin ke warung, beri harga grosir untuk pembelian banyak, dan pastikan produksi cukup di hari ramai (lihat prediksi produksi di dashboard).",
     "lebaran": "🌙 Jelang Lebaran permintaan biasanya naik — cek prediksi produksi di dashboard dan siapkan stok lebih awal.",
@@ -164,9 +167,13 @@ def _stock_summary(db) -> str:
         return "Belum ada stok tercatat."
     parts = []
     for s in stocks:
-        if s.quantity < s.min_critical:
+        # Guard nullable: min_critical/min_warning boleh NULL (tiru pola
+        # app/routers/production.py) - tanpa guard, None -> TypeError.
+        min_critical = s.min_critical
+        min_warning = s.min_warning
+        if min_critical is not None and s.quantity < min_critical:
             status = "KRITIS - beli segera"
-        elif s.quantity < s.min_warning:
+        elif min_warning is not None and s.quantity < min_warning:
             status = "WASPADA"
         else:
             status = "AMAN"
@@ -283,8 +290,8 @@ def _dynamic_db_fallback(message: str, db) -> str:
         msg = message.lower()
         # Urutan prioritas: spesifik dulu, umum belakangan.
         # Word-boundary (\b) dijaga: 'jual' tidak kena 'penjualan' dll.
-        priority = ["lebaran", "ragi", "penjualan", "basi", "pelanggan", "stok",
-                    "produksi", "pembeli", "besok", "harga", "jual"]
+        priority = ["lebaran", "ragi", "penjualan", "basi", "pelanggan", "harga",
+                    "jual", "biaya", "stok", "produksi", "pembeli", "besok"]
         for key in priority:
             if re.search(rf"\b{key}\b", msg):
                 if key in ("stok", "ragi"):
@@ -296,7 +303,7 @@ def _dynamic_db_fallback(message: str, db) -> str:
                     return "📈 " + _sales_prediction_text(db)
                 if key in ("pembeli", "besok"):
                     return "📈 " + _sales_prediction_text(db)
-                if key in ("harga", "jual"):
+                if key in ("harga", "jual", "biaya"):
                     price = _price_text(db)
                     if price:
                         return "💰 " + price
@@ -324,8 +331,8 @@ def _rule_based_fallback(message: str) -> str:
     msg = message.lower()
     # Urutan prioritas: konteks SPESIFIK dicek lebih dulu (lebaran, ragi, ...)
     # lalu yang umum (stok, produksi, harga). Word-boundary: 'jual' != 'penjualan'.
-    priority = ["lebaran", "ragi", "penjualan", "basi", "pelanggan", "stok",
-                "produksi", "harga", "jual"]
+    priority = ["lebaran", "ragi", "penjualan", "basi", "pelanggan", "harga",
+                "jual", "biaya", "stok", "produksi"]
     for key in priority:
         if re.search(rf"\b{key}\b", msg):
             return FALLBACK_RESPONSES[key]

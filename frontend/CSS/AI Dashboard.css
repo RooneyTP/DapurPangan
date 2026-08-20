@@ -476,3 +476,28 @@ body{
 .list-data::-webkit-scrollbar-thumb:hover{
     background: #a8a8a8;
 }
+
+/* Responsif layar kecil (laptop 1366px dan di bawahnya) */
+@media (max-width: 1450px){
+    #Sidebar{
+        width: 220px;
+    }
+    #main-frame{
+        margin-left: 220px;
+        width: calc(100% - 220px);
+    }
+    .isi{
+        width: calc(100% - 35px);
+    }
+    .isi a{
+        font-size: 14px;
+    }
+    .box,
+    .result-box,
+    .box-list,
+    .page-frame{
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}

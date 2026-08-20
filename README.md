@@ -207,7 +207,7 @@ python -m uvicorn app.main:app --reload
 - Fine-tuning: model produksi di-train ulang saat server start dari riwayat di
   database; model penjualan B2C di-retrain setiap pemanggilan prediksi; tidak
   ada jalur input data produksi baru selain seed/riwayat di database
-- Fitur: hari, tanggal, bulan, flag event liburan
+- Fitur: hari, tanggal, bulan, penanda akhir tahun (Desember >= 20)
 - Output: prediksi + confidence score + upper/lower bound
 - Confidence meningkat seiring data: 63% (7 titik) -> 91% (30 titik)
 

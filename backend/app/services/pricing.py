@@ -13,28 +13,47 @@ from app.models import Product, Recipe, Stock
 logger = logging.getLogger("daparpangan.pricing")
 
 
+# --- Normalisasi satuan (kanonik: gram untuk massa, liter untuk volume) ---
+# Sama seperti logika di backend/app/routers/recipe.py supaya konsisten.
+_MASS_UNITS = {"kg", "kilogram", "g", "gr", "gram"}
+_VOLUME_UNITS = {"l", "liter", "ml", "milliliter", "mililiter"}
+
+
+def _to_grams(value: float, unit: str) -> float:
+    """Konversi satuan massa ke gram. Unit tak dikenal -> nilai apa adanya (jangan crash)."""
+    u = (unit or "").strip().lower()
+    if u in ("kg", "kilogram"):
+        return value * 1000.0
+    if u in ("g", "gr", "gram"):
+        return value
+    return value
+
+
+def _to_liters(value: float, unit: str) -> float:
+    """Konversi satuan volume ke liter. Unit tak dikenal -> nilai apa adanya (jangan crash)."""
+    u = (unit or "").strip().lower()
+    if u in ("l", "liter"):
+        return value
+    if u in ("ml", "milliliter", "mililiter"):
+        return value / 1000.0
+    return value
+
+
 def _convert_to_stock_unit(quantity: float, recipe_unit: str, stock_unit: str) -> float:
     """Konversi kuantitas resep ke satuan stok sebelum perkalian harga.
 
-    g → kg dibagi 1000, ml → l dibagi 1000 (dan kebalikannya);
-    pcs/lembar/bungkus & satuan sama → passthrough.
+    Massa (kg/kilogram/g/gr/gram) <-> massa, volume (l/liter/ml/milliliter/
+    mililiter) <-> volume, termasuk bentuk panjang 'gram'/'kilogram'/'ml'.
+    pcs/lembar/bungkus & unit tak dikenal -> passthrough (jangan crash).
     """
     ru = (recipe_unit or '').strip().lower()
     su = (stock_unit or '').strip().lower()
     if ru == su:
         return quantity
-    if ru == 'g' and su == 'kg':
-        return quantity / 1000.0
-    if ru == 'kg' and su == 'g':
-        return quantity * 1000.0
-    if ru == 'ml' and su == 'l':
-        return quantity / 1000.0
-    if ru == 'l' and su == 'ml':
-        return quantity * 1000.0
-    if ru == 'liter' and su == 'l':
-        return quantity
-    if ru == 'l' and su == 'liter':
-        return quantity
+    if ru in _MASS_UNITS and su in _MASS_UNITS:
+        return _to_grams(quantity, ru) / _to_grams(1.0, su)
+    if ru in _VOLUME_UNITS and su in _VOLUME_UNITS:
+        return _to_liters(quantity, ru) / _to_liters(1.0, su)
     # pcs / lembar / bungkus dan kombinasi lain: passthrough
     return quantity
 
