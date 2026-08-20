@@ -7,6 +7,7 @@ per baris (maksimal 20 entri). Commit dilakukan satu kali di akhir.
 import csv
 import io
 import math
+import re
 from datetime import date
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -32,25 +33,77 @@ def _decode(payload: bytes) -> str:
 
 
 def _check_header(fieldnames, required: list[str]) -> None:
-    """Pastikan header CSV memuat semua kolom wajib, kalau tidak → 422."""
-    missing = [c for c in required if c not in (fieldnames or [])]
+    """Pastikan header CSV memuat semua kolom wajib, kalau tidak → 422.
+
+    Kalau nama kolom memuat ';' berarti file memakai pemisah titik-koma
+    (umumnya dari Excel Indonesia) -> beri pesan spesifik, bukan pesan header.
+    Pesan header menyebut kolom yang DITEMUKAN supaya user tahu bedanya
+    dengan kolom wajib.
+    """
+    fieldnames = fieldnames or []
+    if any(';' in (f or '') for f in fieldnames):
+        raise HTTPException(
+            422,
+            "File memakai pemisah titik-koma (umumnya dari Excel Indonesia). "
+            "Simpan ulang CSV dengan pemisah koma (,) lalu coba lagi."
+        )
+    missing = [c for c in required if c not in fieldnames]
     if missing:
+        found = ", ".join(fieldnames) if fieldnames else "(tidak ada)"
         raise HTTPException(
             422,
             "Format CSV salah. Header wajib: " + ", ".join(required)
+            + ". Kolom ditemukan di file: " + found
         )
+
+
+def _parse_number(value) -> float:
+    """Parse angka gaya Indonesia: '1.500' -> 1500.0, '50,5' -> 50.5, '1,5' -> 1.5.
+
+    Salinan lokal logika _parse_number (app/services/data_entry.py) supaya
+    tidak ada import silang. Raise ValueError kalau tidak bisa diparse.
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    s = str(value).strip().replace('\u00a0', '').replace(' ', '')
+    if not s:
+        raise ValueError(f"angka kosong: {value!r}")
+    # Pola ribuan: 1.500 / 1,500 / 12.500.000 (opsional desimal di akhir)
+    m = re.fullmatch(r'(\d{1,3}(?:[.,]\d{3})+)(?:[.,](\d+))?', s)
+    if m:
+        int_part = m.group(1).replace('.', '').replace(',', '')
+        frac = m.group(2) or ''
+        s = int_part + (('.' + frac) if frac else '')
+    else:
+        # Koma desimal tunggal gaya Eropa: 50,5 -> 50.5
+        if ',' in s and '.' not in s:
+            s = s.replace(',', '.')
+    try:
+        return float(s)
+    except ValueError:
+        raise ValueError(f"angka tidak valid: {value!r}")
+
+
+def _is_number(value) -> bool:
+    """True kalau value bisa diparse sebagai angka (termasuk gaya Indonesia)."""
+    try:
+        _parse_number(value)
+        return True
+    except (ValueError, TypeError):
+        return False
 
 
 def _parse_optional_float(value):
     """Parse float opsional: kosong -> (None, None), tidak valid -> (None, error).
 
+    Mendukung angka gaya Indonesia ('1.500' -> 1500, '1,5' -> 1.5).
     Non-finite (NaN/Infinity) ditolak supaya tidak pernah masuk DB.
     """
     s = (value or "").strip()
     if not s:
         return None, None
     try:
-        f = float(s)
+        f = _parse_number(s)
     except ValueError:
         return None, "harus angka"
     if not math.isfinite(f):
@@ -82,7 +135,7 @@ def import_stocks(payload: bytes = Body(...), db: Session = Depends(get_db)):
     Opsional: unit, price_per_unit, min_warning, min_critical.
     Baris duplikat (case-insensitive, terhadap DB & batch ini) dilewati.
     """
-    reader = csv.DictReader(io.StringIO(_decode(payload)))
+    reader = csv.DictReader(io.StringIO(_decode(payload)), restkey="_extra")
     _check_header(reader.fieldnames, ["ingredient_name", "quantity"])
 
     imported = 0
@@ -95,8 +148,30 @@ def import_stocks(payload: bytes = Body(...), db: Session = Depends(get_db)):
             errors.append({"row": idx, "reason": "Nama bahan wajib diisi"})
             continue
 
+        qty_raw = (raw.get("quantity") or "").strip()
+        unit_raw = (raw.get("unit") or "").strip()
+        price_raw = (raw.get("price_per_unit") or "").strip()
+
+        # Perbaikan kolom bergeser: koma desimal "50,5" dipecah CSV menjadi
+        # quantity="50", unit="5". Deteksi: unit berupa angka + kolom price
+        # (atau kolom ekstra) berisi teks unit -> gabungkan kembali jadi "50,5".
+        shift_unit = ""
+        if unit_raw and _is_number(unit_raw):
+            if price_raw and not _is_number(price_raw):
+                shift_unit = price_raw
+            else:
+                for tok in (raw.get("_extra") or []):
+                    t = (tok or "").strip()
+                    if t and not _is_number(t):
+                        shift_unit = t
+                        break
+        if shift_unit:
+            qty_raw = qty_raw + "," + unit_raw
+            unit_raw = shift_unit
+            price_raw = ""
+
         try:
-            qty = float((raw.get("quantity") or "").strip())
+            qty = _parse_number(qty_raw)
         except ValueError:
             errors.append({"row": idx, "reason": "quantity harus angka"})
             continue
@@ -111,8 +186,8 @@ def import_stocks(payload: bytes = Body(...), db: Session = Depends(get_db)):
             errors.append({"row": idx, "reason": f"Stok '{name}' sudah ada"})
             continue
 
-        unit = (raw.get("unit") or "").strip() or "kg"
-        price, price_err = _parse_optional_float(raw.get("price_per_unit"))
+        unit = unit_raw or "kg"
+        price, price_err = _parse_optional_float(price_raw)
         if price_err:
             errors.append({"row": idx, "reason": "price_per_unit " + price_err})
             continue
@@ -244,10 +319,14 @@ def import_orders(payload: bytes = Body(...), db: Session = Depends(get_db)):
             continue
 
         try:
-            qty = int((raw.get("quantity") or "").strip())
+            qty_f = _parse_number((raw.get("quantity") or "").strip())
         except ValueError:
             errors.append({"row": idx, "reason": "quantity harus bilangan bulat"})
             continue
+        if not math.isfinite(qty_f) or qty_f != int(qty_f):
+            errors.append({"row": idx, "reason": "quantity harus bilangan bulat"})
+            continue
+        qty = int(qty_f)
         if qty < 1:
             errors.append({"row": idx, "reason": "quantity harus >= 1"})
             continue
@@ -304,6 +383,8 @@ def import_sales(payload: bytes = Body(...), db: Session = Depends(get_db)):
     Opsional: date (format YYYY-MM-DD; default tanggal hari ini).
     Produk dicari case-insensitive; baris dengan produk tak dikenal,
     angka tidak valid (< 1), atau tanggal salah → dilewati + dilaporkan.
+    Baris duplikat (product + date + individual_count + quantity_per_individual
+    yang sama, terhadap DB & batch ini) dilewati + dilaporkan.
     """
     reader = csv.DictReader(io.StringIO(_decode(payload)))
     _check_header(reader.fieldnames, [
@@ -312,6 +393,7 @@ def import_sales(payload: bytes = Body(...), db: Session = Depends(get_db)):
 
     imported = 0
     errors = []
+    imported_sales: set = set()  # kombinasi (product, date, individual_count, qty) batch ini
 
     for idx, raw in enumerate(reader, start=2):
         product_name = (raw.get("product_name") or "").strip()
@@ -336,10 +418,14 @@ def import_sales(payload: bytes = Body(...), db: Session = Depends(get_db)):
             sale_date = date.today()
 
         try:
-            individuals = int((raw.get("individual_count") or "").strip())
+            ind_f = _parse_number((raw.get("individual_count") or "").strip())
         except ValueError:
             errors.append({"row": idx, "reason": "individual_count harus bilangan bulat"})
             continue
+        if not math.isfinite(ind_f) or ind_f != int(ind_f):
+            errors.append({"row": idx, "reason": "individual_count harus bilangan bulat"})
+            continue
+        individuals = int(ind_f)
         if individuals < 1:
             errors.append({"row": idx, "reason": "individual_count harus >= 1"})
             continue
@@ -348,15 +434,34 @@ def import_sales(payload: bytes = Body(...), db: Session = Depends(get_db)):
             continue
 
         try:
-            qty_per = int((raw.get("quantity_per_individual") or "").strip())
+            qty_f = _parse_number((raw.get("quantity_per_individual") or "").strip())
         except ValueError:
             errors.append({"row": idx, "reason": "quantity_per_individual harus bilangan bulat"})
             continue
+        if not math.isfinite(qty_f) or qty_f != int(qty_f):
+            errors.append({"row": idx, "reason": "quantity_per_individual harus bilangan bulat"})
+            continue
+        qty_per = int(qty_f)
         if qty_per < 1:
             errors.append({"row": idx, "reason": "quantity_per_individual harus >= 1"})
             continue
         if qty_per > 100:
             errors.append({"row": idx, "reason": "quantity_per_individual terlalu besar (maks 100)"})
+            continue
+
+        # Dedup: kombinasi (product, date, individual_count, qty_per) sudah ada?
+        combo = (product.id, sale_date, individuals, qty_per)
+        exists_sale = db.query(Sale).filter(
+            Sale.product_id == product.id,
+            Sale.date == sale_date,
+            Sale.individual_count == individuals,
+            Sale.quantity_per_individual == qty_per,
+        ).first()
+        if exists_sale or combo in imported_sales:
+            errors.append({
+                "row": idx,
+                "reason": "Penjualan duplikat (product, date, individual_count, quantity_per_individual yang sama sudah ada)",
+            })
             continue
 
         try:
@@ -374,6 +479,7 @@ def import_sales(payload: bytes = Body(...), db: Session = Depends(get_db)):
         except OverflowError:
             errors.append({"row": idx, "reason": "Angka terlalu besar"})
             continue
+        imported_sales.add(combo)
         imported += 1
 
     return _finish("sales", imported, errors, db)

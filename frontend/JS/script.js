@@ -1331,7 +1331,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     let msg = `Import gagal (HTTP ${res.status})`;
                     try {
                         const errJson = await res.json();
-                        msg = (errJson && typeof errJson.detail === 'string') ? errJson.detail : JSON.stringify(errJson);
+                        if(errJson && typeof errJson.detail === 'string'){
+                            msg = errJson.detail;
+                        } else if(errJson && errJson.detail !== null && typeof errJson.detail === 'object'){
+                            // detail berbentuk array/objek (validasi FastAPI,
+                            // misal file kosong / bukan CSV) -> pesan ramah,
+                            // bukan JSON mentah yang membingungkan
+                            msg = 'File kosong atau bukan file CSV yang valid. Gunakan template yang tersedia.';
+                        } else if(errJson){
+                            msg = JSON.stringify(errJson);
+                        }
                     } catch(e2) {
                         const txt = await res.text().catch(() => '');
                         if(txt) msg = txt;
