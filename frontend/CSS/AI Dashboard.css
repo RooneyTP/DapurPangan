@@ -23,6 +23,8 @@ body{
     min-height: 100vh;
     box-sizing: border-box;
     position: fixed;
+    top: 0;
+    bottom: 0;
     overflow-y: auto;
 }
 
