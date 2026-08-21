@@ -5,7 +5,8 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Default: SQLite lokal (fresh clone langsung bisa start tanpa env).
 # Docker compose / produksi set env DATABASE_URL dari container — tidak terpengaruh.
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./daparpangan.db")
+# Env yang diset kosong ("") diperlakukan sama seperti tidak diset -> SQLite.
+DATABASE_URL = os.getenv("DATABASE_URL") or "sqlite:///./daparpangan.db"
 
 engine = create_engine(DATABASE_URL)
 
