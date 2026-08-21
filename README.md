@@ -138,7 +138,7 @@ python -m uvicorn app.main:app --reload
 # Dashboard: buka frontend/HTML/AI Dashboard.html di browser
 ```
 
-> **Penting:** TANPA env `DATABASE_URL`, backend memakai default PostgreSQL (`localhost:5432`) dan gagal start dengan error "connection refused" port 5432. Untuk mode lokal tanpa Docker, env `DATABASE_URL` sqlite **WAJIB** di-set sebelum menjalankan uvicorn. Kalau perlu gunakan path absolut: `sqlite:///C:/path/ke/backend/daparpangan.db`. File database `backend/daparpangan.db` dibuat otomatis saat pertama kali jalan. Untuk produksi tetap pakai Docker (PostgreSQL).
+> **Catatan:** TANPA env `DATABASE_URL`, backend otomatis memakai SQLite lokal (`backend/daparpangan.db`, dibuat saat pertama kali start) - mode lokal tanpa Docker langsung jalan. Env `DATABASE_URL` HANYA perlu di-set untuk pindah ke PostgreSQL (docker-compose sudah menyetelnya otomatis ke `db:5432`). File database `backend/daparpangan.db` dibuat otomatis saat pertama kali jalan. Untuk produksi tetap pakai Docker (PostgreSQL).
 
 ## Troubleshooting
 
